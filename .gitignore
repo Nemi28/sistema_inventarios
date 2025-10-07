@@ -5,6 +5,8 @@ node_modules/
 # Variables de entorno
 .env
 **/.env
+*.env.local
+**/.env.local
 
 # Archivos de sistema
 .DS_Store
@@ -13,7 +15,27 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+yarn-error.log*
 
 # Build
 build/
 dist/
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Coverage y tests
+coverage/
+.nyc_output/
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Cache
+.cache/
+.parcel-cache/
