@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/auth/PrivateRoute';
 import PublicRoute from './components/auth/PublicRoute';
+import MainLayout from './components/layout/MainLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Dashboard from './pages/Dashboard';
@@ -15,9 +16,6 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Ruta raíz - redirige según autenticación */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-
           {/* Rutas públicas - solo accesibles si NO estás autenticado */}
           <Route
             path="/login"
@@ -36,15 +34,26 @@ function App() {
             }
           />
 
-          {/* Rutas privadas - solo accesibles si estás autenticado */}
+          {/* Rutas privadas con MainLayout - Rutas anidadas */}
           <Route
-            path="/dashboard"
             element={
               <PrivateRoute>
-                <Dashboard />
+                <MainLayout />
               </PrivateRoute>
             }
-          />
+          >
+            <Route path="/dashboard" element={<Dashboard />} />
+            {/* 🔹 Aquí se agregarán más rutas privadas en el futuro */}
+            {/* Ejemplo:
+            <Route path="/productos" element={<Productos />} />
+            <Route path="/productos/agregar" element={<AgregarProducto />} />
+            <Route path="/inventario/stock" element={<Stock />} />
+            <Route path="/usuarios" element={<Usuarios />} />
+            */}
+          </Route>
+
+          {/* Ruta raíz - redirige al dashboard si está autenticado */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           {/* Ruta 404 - Página no encontrada */}
           <Route path="*" element={<NotFound />} />
