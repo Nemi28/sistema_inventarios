@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDatabase } from './config/database';
 import authRoutes from './routes/auth.routes';
+import skuRoutes from './routes/sku.routes';
+import socioRoutes from './routes/socio.routes';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 
 // Configurar variables de entorno
@@ -28,6 +30,8 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       auth: '/api/auth',
+      skus: '/api/skus',
+      socio: '/api/socios',
       docs: '/api/docs',
     },
   });
@@ -35,6 +39,8 @@ app.get('/', (req, res) => {
 
 // Rutas de la API
 app.use('/api/auth', authRoutes);
+app.use('/api/skus', skuRoutes);
+app.use('/api/socios', socioRoutes);
 
 // Middleware de rutas no encontradas
 app.use(notFound);
