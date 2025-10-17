@@ -33,3 +33,131 @@ export const loginValidation: ValidationChain[] = [
   body('password')
     .notEmpty().withMessage('La contraseña es obligatoria')
 ];
+
+// ============================================
+// VALIDACIONES PARA SKUs
+// ============================================
+
+/**
+ * Validaciones para crear SKU
+ */
+export const validarCrearSKU = [
+  body('codigo_sku')
+    .notEmpty()
+    .withMessage('El código SKU es requerido')
+    .isLength({ min: 3, max: 20 })
+    .withMessage('El código SKU debe tener entre 3 y 20 caracteres')
+    .matches(/^[A-Za-z0-9-]+$/)
+    .withMessage('El código SKU solo puede contener letras, números y guiones')
+    .trim(),
+
+  body('descripcion_sku')
+    .notEmpty()
+    .withMessage('La descripción es requerida')
+    .isLength({ min: 3, max: 100 })
+    .withMessage('La descripción debe tener entre 3 y 100 caracteres')
+    .trim(),
+
+  body('activo')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo activo debe ser true o false'),
+];
+
+/**
+ * Validaciones para actualizar SKU
+ */
+export const validarActualizarSKU = [
+  body('codigo_sku')
+    .optional()
+    .isLength({ min: 3, max: 20 })
+    .withMessage('El código SKU debe tener entre 3 y 20 caracteres')
+    .matches(/^[A-Za-z0-9-]+$/)
+    .withMessage('El código SKU solo puede contener letras, números y guiones')
+    .trim(),
+
+  body('descripcion_sku')
+    .optional()
+    .isLength({ min: 3, max: 100 })
+    .withMessage('La descripción debe tener entre 3 y 100 caracteres')
+    .trim(),
+
+  body('activo')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo activo debe ser true o false'),
+];
+
+// ============================================
+// VALIDACIONES PARA SOCIOS
+// ============================================
+
+/**
+ * Validaciones para crear SOCIO
+ */
+export const validarCrearSocio: ValidationChain[] = [
+  body('razon_social')
+    .notEmpty()
+    .withMessage('La razón social es obligatoria')
+    .isLength({ min: 3, max: 50 })
+    .withMessage('La razón social debe tener entre 3 y 50 caracteres')
+    .matches(/^[A-Za-z0-9\s\.\-&]+$/)
+    .withMessage('La razón social solo puede contener letras, números, espacios, puntos, guiones o "&"')
+    .trim(),
+
+  body('ruc')
+    .notEmpty()
+    .withMessage('El RUC es obligatorio')
+    .isLength({ min: 11, max: 11 })
+    .withMessage('El RUC debe tener 11 caracteres')
+    .matches(/^[0-9]+$/)
+    .withMessage('El RUC solo puede contener números')
+    .trim(),
+
+  body('direccion')
+    .notEmpty()
+    .withMessage('La dirección es obligatoria')
+    .isLength({ min: 3, max: 100 })
+    .withMessage('La dirección debe tener entre 3 y 100 caracteres')
+    .trim(),
+
+  body('activo')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo activo debe ser true o false'),
+];
+
+/**
+ * Validaciones para actualizar SOCIO
+ */
+export const validarActualizarSocio: ValidationChain[] = [
+  body('razon_social')
+    .optional()
+    .isLength({ min: 3, max: 50 })
+    .withMessage('La razón social debe tener entre 3 y 50 caracteres')
+    .matches(/^[A-Za-z0-9\s\.\-&]+$/)
+    .withMessage('La razón social solo puede contener letras, números, espacios, puntos, guiones o "&"')
+    .trim(),
+
+  body('ruc')
+  .notEmpty()
+  .withMessage('El RUC es obligatorio')
+  .isLength({ min: 11, max: 11 })
+  .withMessage('El RUC debe tener exactamente 11 dígitos')
+  .matches(/^[0-9]{11}$/)
+  .withMessage('El RUC debe contener solo números')
+  .matches(/^[1-2][0-9]{10}$/)  
+  .withMessage('El RUC debe iniciar con 10, 15, 17 o 20')
+  .trim(),
+
+  body('direccion')
+    .optional()
+    .isLength({ min: 3, max: 100 })
+    .withMessage('La dirección debe tener entre 3 y 100 caracteres')
+    .trim(),
+
+  body('activo')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo activo debe ser true o false'),
+];
