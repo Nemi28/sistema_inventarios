@@ -1,7 +1,5 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/auth/PrivateRoute';
 import PublicRoute from './components/auth/PublicRoute';
@@ -10,6 +8,10 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Dashboard from './pages/Dashboard';
 import NotFound from './pages/NotFound';
+
+
+import { SKUsPage } from './features/skus/components/SKUsPage';
+import { SociosPage } from './features/socios/components/SociosPage';
 
 function App() {
   return (
@@ -43,13 +45,12 @@ function App() {
             }
           >
             <Route path="/dashboard" element={<Dashboard />} />
+            
+           
+            <Route path="/skus" element={<SKUsPage />} />
+            <Route path="/socios" element={<SociosPage />} />
+            
             {/* 🔹 Aquí se agregarán más rutas privadas en el futuro */}
-            {/* Ejemplo:
-            <Route path="/productos" element={<Productos />} />
-            <Route path="/productos/agregar" element={<AgregarProducto />} />
-            <Route path="/inventario/stock" element={<Stock />} />
-            <Route path="/usuarios" element={<Usuarios />} />
-            */}
           </Route>
 
           {/* Ruta raíz - redirige al dashboard si está autenticado */}
@@ -58,20 +59,6 @@ function App() {
           {/* Ruta 404 - Página no encontrada */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-
-        {/* Notificaciones Toast */}
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
       </AuthProvider>
     </BrowserRouter>
   );
