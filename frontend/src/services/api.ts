@@ -1,6 +1,10 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { API_URL, API_TIMEOUT, ERROR_MESSAGES } from '../utils/constants';
+import { toast } from 'sonner';
 import tokenService from './token.service';
+
+// Variables de entorno
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const API_TIMEOUT = Number(process.env.REACT_APP_API_TIMEOUT) || 10000;
 
 // Crear instancia de axios
 const api: AxiosInstance = axios.create({
@@ -31,39 +35,44 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // Error de red
     if (!error.response) {
-      // Error de red
-      return Promise.reject({
-        message: ERROR_MESSAGES.NETWORK_ERROR,
-        originalError: error,
+      toast.error('Error de conexión', {
+        description: 'No se pudo conectar con el servidor',
+        duration: 5000,
       });
+      return Promise.reject(error);
     }
 
-    // Error del servidor
     const status = error.response.status;
 
+    // Error 401: Sesión expirada
     if (status === 401) {
-      // Token expirado o inválido
       tokenService.removeToken();
       window.location.href = '/login';
-      return Promise.reject({
-        message: ERROR_MESSAGES.SESSION_EXPIRED,
-        originalError: error,
+      toast.error('Sesión expirada', {
+        description: 'Por favor, inicia sesión nuevamente',
+        duration: 5000,
       });
+      return Promise.reject(error);
     }
 
+    // Error 403: Sin permisos
     if (status === 403) {
-      return Promise.reject({
-        message: ERROR_MESSAGES.UNAUTHORIZED,
-        originalError: error,
+      toast.error('Sin permisos', {
+        description: 'No tienes autorización para realizar esta acción',
+        duration: 4000,
       });
+      return Promise.reject(error);
     }
 
+    // Error 500: Error del servidor
     if (status >= 500) {
-      return Promise.reject({
-        message: ERROR_MESSAGES.SERVER_ERROR,
-        originalError: error,
+      toast.error('Error del servidor', {
+        description: 'Ocurrió un problema. Intenta nuevamente.',
+        duration: 5000,
       });
+      return Promise.reject(error);
     }
 
     // Retornar el error original para otros casos

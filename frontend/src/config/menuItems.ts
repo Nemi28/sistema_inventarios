@@ -9,7 +9,8 @@ import {
   AlertCircle,
   FolderOpen,
   Plus,
-  List
+  List,
+  Tag
 } from 'lucide-react';
 import { MenuItem } from '../types/menu.types';
 
@@ -19,6 +20,20 @@ export const menuItems: MenuItem[] = [
     label: 'Dashboard',
     icon: Home,
     path: '/dashboard',
+    roles: ['administrador', 'gestor', 'operador']
+  },
+    {
+    id: 'skus',
+    label: 'SKUs',
+    icon: Tag,
+    path: '/skus',
+    roles: ['administrador', 'gestor', 'operador']
+  },
+      {
+    id: 'socios',
+    label: 'SOCIOS',
+    icon: Users,
+    path: '/socios',
     roles: ['administrador', 'gestor', 'operador']
   },
   {
