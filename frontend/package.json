@@ -18,10 +18,10 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "@types/jest": "^30.0.0",
-    "@types/node": "^24.7.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.1",
     "axios": "^1.12.2",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "jwt-decode": "^4.0.0",
@@ -40,9 +40,9 @@
     "zod": "^3.25.76"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -64,9 +64,12 @@
     ]
   },
   "devDependencies": {
+    "@types/node": "^24.9.1",
     "@types/react-router-dom": "^5.3.3",
     "autoprefixer": "^10.4.21",
+    "customize-cra": "^1.0.0",
     "postcss": "^8.5.6",
+    "react-app-rewired": "^2.2.1",
     "tailwindcss": "^3.4.18"
   }
 }

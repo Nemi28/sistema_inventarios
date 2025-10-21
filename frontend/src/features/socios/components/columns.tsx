@@ -1,13 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Socio } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -71,34 +65,36 @@ export const columns: ColumnDef<Socio>[] = [
     },
   },
   {
-    id: 'acciones',
-    header: 'Acciones',
-    cell: ({ row, table }) => {
-      const socio = row.original;
-      const meta = table.options.meta as any;
+  id: 'acciones',
+  header: 'Acciones',
+  cell: ({ row, table }) => {
+    const item = row.original;
+    const meta = table.options.meta as any;
 
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button className="h-8 w-8 p-0 bg-transparent hover:bg-gray-100">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => meta?.onEdit(socio)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => meta?.onDelete?.(socio)}
-              className="text-red-600 focus:text-red-600"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    return (
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            meta?.onEdit(item);
+          }}
+          className="h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 text-white"
+          title="Editar"
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            meta?.onDelete?.(item);
+          }}
+          className="h-8 w-8 p-0 bg-red-500 hover:bg-red-600 text-white"
+          title="Eliminar"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    );
   },
+}
 ];

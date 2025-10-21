@@ -1,4 +1,4 @@
-import api from '@/services/api';
+import api from '../../../services/api';
 import { Socio } from '../types';
 import { PaginatedResponse } from '@/types/api.types';
 
@@ -15,7 +15,7 @@ export interface ListarSociosParams {
 export const listarSocios = async (
   params: ListarSociosParams = {}
 ): Promise<PaginatedResponse<Socio>> => {
-  const { data } = await api.get<PaginatedResponse<Socio>>('/socios', { params });
+  const { data } = await api.get<PaginatedResponse<Socio>>('/api/socios', { params });
   return data;
 };
 
@@ -24,7 +24,7 @@ export const buscarSocios = async (
   page = 1,
   limit = 20
 ): Promise<PaginatedResponse<Socio>> => {
-  const { data } = await api.get<PaginatedResponse<Socio>>('/socios/buscar', {
+  const { data } = await api.get<PaginatedResponse<Socio>>('/api/socios/buscar', {
     params: { q: termino, page, limit },
   });
   return data;
@@ -32,7 +32,7 @@ export const buscarSocios = async (
 
 export const obtenerSocio = async (id: number): Promise<Socio> => {
   const { data } = await api.get<{ success: boolean; data: Socio }>(
-    `/socios/${id}`
+    `/api/socios/${id}`
   );
   return data.data;
 };
@@ -41,7 +41,7 @@ export const crearSocio = async (
   socio: Omit<Socio, 'id' | 'fecha_creacion' | 'fecha_actualizacion'>
 ): Promise<Socio> => {
   const { data } = await api.post<{ success: boolean; data: Socio }>(
-    '/socios',
+    '/api/socios',
     socio
   );
   return data.data;
@@ -52,20 +52,21 @@ export const actualizarSocio = async (
   socio: Partial<Omit<Socio, 'id' | 'fecha_creacion' | 'fecha_actualizacion'>>
 ): Promise<Socio> => {
   const { data } = await api.put<{ success: boolean; data: Socio }>(
-    `/socios/${id}`,
+    `/api/socios/${id}`,
     socio
   );
   return data.data;
 };
 
 export const eliminarSocio = async (id: number): Promise<void> => {
-  await api.delete(`/socios/${id}`);
+  await api.delete(`/api/socios/${id}`);
 };
 
-export const reactivarSocio = async (id: number): Promise<Socio> => {
+export const reactivarSocio = async (id: number, datos: Partial<Socio>): Promise<Socio> => {
   const { data } = await api.put<{ success: boolean; data: Socio }>(
-    `/socios/${id}`,
-    { activo: true }
+    `/api/socios/${id}`,
+    { ...datos, activo: true }
   );
+  console.log('📥 Respuesta del backend:', data);
   return data.data;
 };

@@ -49,6 +49,7 @@ export const SocioFormModal = ({
       direccion: '',
       activo: true,
     },
+    mode: 'onChange',
   });
 
   // Resetear form cuando cambia el Socio
@@ -58,7 +59,7 @@ export const SocioFormModal = ({
         razon_social: socio.razon_social,
         ruc: socio.ruc,
         direccion: socio.direccion,
-        activo: socio.activo,
+        activo: Boolean(socio.activo),
       });
     } else {
       form.reset({

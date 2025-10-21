@@ -41,14 +41,15 @@ export const SKUFormModal = ({
   const createMutation = useCreateSKU();
   const updateMutation = useUpdateSKU();
 
-const form = useForm({
-  resolver: zodResolver(skuSchema),
-  defaultValues: {
-    codigo_sku: '',
-    descripcion_sku: '',
-    activo: true,
-  },
-});
+  const form = useForm<SKUFormData>({
+    resolver: zodResolver(skuSchema) as any,
+    defaultValues: {
+      codigo_sku: '',
+      descripcion_sku: '',
+      activo: true,
+    },
+    mode: 'onChange',
+  });
 
   // Resetear form cuando cambia el SKU
   useEffect(() => {
@@ -56,7 +57,7 @@ const form = useForm({
       form.reset({
         codigo_sku: sku.codigo_sku,
         descripcion_sku: sku.descripcion_sku,
-        activo: sku.activo,
+        activo: Boolean(sku.activo),
       });
     } else {
       form.reset({
@@ -68,16 +69,23 @@ const form = useForm({
   }, [sku, form]);
 
   const onSubmit = async (data: SKUFormData) => {
+    console.log('📝 Datos del formulario:', data);
+    console.log('✏️ ¿Es edición?', isEditing);
+    console.log('🆔 ID del SKU:', sku?.id);
+    
     try {
-      if (isEditing) {
+      if (isEditing && sku) {
+        console.log('🔄 Llamando updateMutation...');
         await updateMutation.mutateAsync({ id: sku.id, ...data });
       } else {
+        console.log('➕ Llamando createMutation...');
         await createMutation.mutateAsync(data);
       }
+      console.log('✅ Operación exitosa');
       onOpenChange(false);
       form.reset();
     } catch (error) {
-      // Error ya manejado en el hook
+      console.error('❌ Error en onSubmit:', error);
     }
   };
 
@@ -158,8 +166,11 @@ const form = useForm({
                     <input
                       type="checkbox"
                       checked={field.value}
-                      onChange={field.onChange}
-                      className="h-5 w-5"
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                      className="h-5 w-5 cursor-pointer"
                     />
                   </FormControl>
                 </FormItem>

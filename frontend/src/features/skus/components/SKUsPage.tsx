@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SearchBar } from '@/components/common/SearchBar';
+import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 import { SKUTable } from './SKUTable';
 import { SKUFormModal } from './SKUFormModal';
 import { SKUFilters } from './SKUFilters';
@@ -20,6 +21,7 @@ export const SKUsPage = () => {
   const [ordenar_por, setOrdenarPor] = useState<string>('fecha_creacion');
   const [orden, setOrden] = useState<'ASC' | 'DESC'>('DESC');
   const [editingSKU, setEditingSKU] = useState<SKU | null>(null);
+  const [deletingItem, setDeletingItem] = useState<SKU | null>(null);
 
   // Hooks personalizados
   const debouncedSearch = useDebounce(searchTerm, 500);
@@ -31,9 +33,9 @@ export const SKUsPage = () => {
   // Queries
   const isSearching = debouncedSearch.length > 0;
   const searchQuery = useSearchSKUs(debouncedSearch, page, 20, isSearching);
-const listQuery = useSKUs(
-  { page, limit: 20, activo, ordenar_por, orden }
-);
+  const listQuery = useSKUs(
+    { page, limit: 20, activo, ordenar_por, orden }
+  );
   const { data, isLoading } = isSearching ? searchQuery : listQuery;
 
   // Handlers
@@ -48,8 +50,16 @@ const listQuery = useSKUs(
   };
 
   const handleDelete = (sku: SKU) => {
-    if (window.confirm(`¿Estás seguro de eliminar el SKU "${sku.codigo_sku}"?`)) {
-      deleteMutation.mutate(sku.id);
+    setDeletingItem(sku);
+  };
+
+  const confirmDelete = () => {
+    if (deletingItem) {
+      deleteMutation.mutate(deletingItem.id, {
+        onSuccess: () => {
+          setDeletingItem(null);
+        }
+      });
     }
   };
 
@@ -105,11 +115,22 @@ const listQuery = useSKUs(
         onDelete={handleDelete}
       />
 
-      {/* Modal */}
+      {/* Modal de Formulario */}
       <SKUFormModal
         open={isOpen}
         onOpenChange={handleCloseModal}
         sku={editingSKU}
+      />
+
+      {/* Modal de Confirmación de Eliminación */}
+      <DeleteConfirmDialog
+        open={!!deletingItem}
+        onOpenChange={(open) => !open && setDeletingItem(null)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar SKU?"
+        description="Estás a punto de eliminar este SKU del sistema."
+        itemName={deletingItem?.codigo_sku}
+        isLoading={deleteMutation.isPending}
       />
     </div>
   );

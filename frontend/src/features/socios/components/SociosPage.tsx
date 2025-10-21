@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SearchBar } from '@/components/common/SearchBar';
+import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 import { SocioTable } from './SocioTable';
 import { SocioFormModal } from './SocioFormModal';
 import { SocioFilters } from './SocioFilters';
@@ -20,6 +21,7 @@ export const SociosPage = () => {
   const [ordenar_por, setOrdenarPor] = useState<string>('fecha_creacion');
   const [orden, setOrden] = useState<'ASC' | 'DESC'>('DESC');
   const [editingSocio, setEditingSocio] = useState<Socio | null>(null);
+  const [deletingItem, setDeletingItem] = useState<Socio | null>(null);
 
   // Hooks personalizados
   const debouncedSearch = useDebounce(searchTerm, 500);
@@ -49,10 +51,18 @@ export const SociosPage = () => {
   };
 
   const handleDelete = (socio: Socio) => {
-    if (window.confirm(`¿Estás seguro de eliminar el Socio "${socio.razon_social}"?`)) {
-      deleteMutation.mutate(socio.id);
-    }
+    setDeletingItem(socio);
   };
+
+const confirmDelete = () => {
+  if (deletingItem) {
+    deleteMutation.mutate({ id: deletingItem.id, socio: deletingItem }, {
+      onSuccess: () => {
+        setDeletingItem(null);
+      }
+    });
+  }
+};
 
   const handleCloseModal = () => {
     setEditingSocio(null);
@@ -106,11 +116,22 @@ export const SociosPage = () => {
         onDelete={handleDelete}
       />
 
-      {/* Modal */}
+      {/* Modal de Formulario */}
       <SocioFormModal
         open={isOpen}
         onOpenChange={handleCloseModal}
         socio={editingSocio}
+      />
+
+      {/* Modal de Confirmación de Eliminación */}
+      <DeleteConfirmDialog
+        open={!!deletingItem}
+        onOpenChange={(open) => !open && setDeletingItem(null)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar Socio?"
+        description="Estás a punto de eliminar este socio de negocio del sistema."
+        itemName={deletingItem?.razon_social}
+        isLoading={deleteMutation.isPending}
       />
     </div>
   );

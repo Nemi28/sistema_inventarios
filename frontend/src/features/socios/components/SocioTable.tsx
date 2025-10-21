@@ -45,22 +45,24 @@ export const SocioTable = ({
   }
 
   return (
-    <div className="space-y-4">
-      <DataTable
-        data={data}
-        columns={columnsWithMeta}
-        isLoading={isLoading}
-      />
+  <div className="space-y-4">
+    <DataTable
+      data={data}
+      columns={columns}
+      isLoading={isLoading}
+      onEdit={onEdit}
+      onDelete={onDelete}
+    />
 
-      {pagination && pagination.total_paginas > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={pagination.total_paginas}
-          onPageChange={onPageChange}
-          totalItems={pagination.total}
-          itemsPerPage={pagination.registros_por_pagina}
-        />
-      )}
-    </div>
-  );
+    {pagination && pagination.total_paginas > 1 && (
+      <Pagination
+        currentPage={currentPage}
+        totalPages={pagination.total_paginas}
+        onPageChange={onPageChange}
+        totalItems={pagination.total}
+        itemsPerPage={pagination.registros_por_pagina}
+      />
+    )}
+  </div>
+);
 };
