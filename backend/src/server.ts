@@ -5,6 +5,7 @@ import { connectDatabase } from './config/database';
 import authRoutes from './routes/auth.routes';
 import skuRoutes from './routes/sku.routes';
 import socioRoutes from './routes/socio.routes';
+import tiendaRoutes from './routes/tienda.routes';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 
 // Configurar variables de entorno
@@ -32,6 +33,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       skus: '/api/skus',
       socio: '/api/socios',
+      tiendas: '/api/tiendas',
       docs: '/api/docs',
     },
   });
@@ -41,7 +43,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/skus', skuRoutes);
 app.use('/api/socios', socioRoutes);
-
+app.use('/api/tiendas', tiendaRoutes);
 // Middleware de rutas no encontradas
 app.use(notFound);
 
