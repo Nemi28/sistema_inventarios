@@ -10,7 +10,8 @@ import {
   FolderOpen,
   Plus,
   List,
-  Tag
+  Tag,
+  Store
 } from 'lucide-react';
 import { MenuItem } from '../types/menu.types';
 
@@ -22,18 +23,25 @@ export const menuItems: MenuItem[] = [
     path: '/dashboard',
     roles: ['administrador', 'gestor', 'operador']
   },
-    {
+  {
     id: 'skus',
     label: 'SKUs',
     icon: Tag,
     path: '/skus',
     roles: ['administrador', 'gestor', 'operador']
   },
-      {
+  {
     id: 'socios',
-    label: 'SOCIOS',
+    label: 'Socios',
     icon: Users,
     path: '/socios',
+    roles: ['administrador', 'gestor', 'operador']
+  },
+  {
+    id: 'tiendas',
+    label: 'Tiendas',
+    icon: Store,
+    path: '/tiendas',
     roles: ['administrador', 'gestor', 'operador']
   },
   {

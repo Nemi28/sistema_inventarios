@@ -79,3 +79,57 @@ export const socioSchema = z.object({
 });
 
 export type SocioFormData = z.infer<typeof socioSchema>;
+
+// ============================================
+// VALIDACIONES PARA TIENDAS
+// ============================================
+
+export const tiendaSchema = z.object({
+  pdv: z
+    .string()
+    .min(1, 'El PDV es obligatorio')
+    .length(4, 'El PDV debe tener exactamente 4 dígitos')
+    .regex(/^[0-9]{4}$/, 'El PDV debe contener solo números'),
+  
+  tipo_local: z
+    .enum(['TIENDA'], {
+      required_error: 'El tipo de local es obligatorio',
+    }),
+  
+  perfil_local: z
+    .enum(['TPF', 'TPF - TC'], {
+      required_error: 'El perfil de local es obligatorio',
+    }),
+  
+  nombre_tienda: z
+    .string()
+    .min(3, 'El nombre debe tener al menos 3 caracteres')
+    .max(50, 'El nombre no puede exceder 50 caracteres')
+    .regex(
+      /^[A-Za-z0-9\s\.\-&]+$/,
+      'Solo se permiten letras, números, espacios, puntos, guiones y "&"'
+    ),
+  
+  socio_id: z
+    .number({
+      required_error: 'Debe seleccionar un socio',
+      invalid_type_error: 'Debe seleccionar un socio válido',
+    })
+    .int()
+    .positive('Debe seleccionar un socio válido'),
+  
+  direccion: z
+    .string()
+    .min(5, 'La dirección debe tener al menos 5 caracteres')
+    .max(100, 'La dirección no puede exceder 100 caracteres'),
+  
+  ubigeo: z
+    .string()
+    .min(1, 'El UBIGEO es obligatorio')
+    .length(6, 'El UBIGEO debe tener exactamente 6 dígitos')
+    .regex(/^[0-9]{6}$/, 'El UBIGEO debe contener solo números'),
+  
+  activo: z.boolean(),
+});
+
+export type TiendaFormData = z.infer<typeof tiendaSchema>;
