@@ -1,5 +1,6 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SKU } from '../types';
 import { format } from 'date-fns';
@@ -55,56 +56,46 @@ export const columns: ColumnDef<SKU>[] = [
     },
   },
   {
-  id: 'acciones',
-  header: 'Acciones',
-  cell: ({ row, table }) => {
-    const item = row.original;
-    const meta = table.options.meta as any;
+    id: 'acciones',
+    header: 'Acciones',
+    cell: ({ row, table }) => {
+      const item = row.original;
+      const meta = table.options.meta as any;
 
-    console.log('🔍 Renderizando acciones');
-    console.log('Item:', item);
-    console.log('Meta:', meta);
-    console.log('onEdit existe?', typeof meta?.onEdit);
-    console.log('onDelete existe?', typeof meta?.onDelete);
-
-    return (
-      <div className="flex items-center gap-2">
-        <button
-          onClick={(e) => {
-            console.log('🔵 CLICK EN EDITAR');
-            e.stopPropagation();
-            if (meta?.onEdit) {
-              console.log('✅ Llamando onEdit');
-              meta.onEdit(item);
-            } else {
-              console.log('❌ onEdit no existe');
-            }
-          }}
-          className="h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center transition-colors"
-          title="Editar"
-          type="button"
-        >
-          <Pencil className="h-4 w-4" />
-        </button>
-        <button
-          onClick={(e) => {
-            console.log('🔴 CLICK EN ELIMINAR');
-            e.stopPropagation();
-            if (meta?.onDelete) {
-              console.log('✅ Llamando onDelete');
-              meta.onDelete(item);
-            } else {
-              console.log('❌ onDelete no existe');
-            }
-          }}
-          className="h-8 w-8 p-0 bg-red-500 hover:bg-red-600 text-white rounded flex items-center justify-center transition-colors"
-          title="Eliminar"
-          type="button"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-    );
+      return (
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (meta?.onEdit) {
+                meta.onEdit(item);
+              }
+            }}
+            className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+            title="Editar"
+            type="button"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (meta?.onDelete) {
+                meta.onDelete(item);
+              }
+            }}
+            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+            title="Eliminar"
+            type="button"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      );
+    },
   },
-}
 ];
