@@ -45,6 +45,13 @@ export const menuItems: MenuItem[] = [
     roles: ['administrador', 'gestor', 'operador']
   },
   {
+    id: 'guias',
+    label: 'Guías de Remisión',
+    icon: FileText,
+    path: '/guias',
+    roles: ['administrador', 'gestor']
+  },
+  {
     id: 'productos',
     label: 'Productos',
     icon: Package,

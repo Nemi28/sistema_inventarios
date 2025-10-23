@@ -133,3 +133,68 @@ export const tiendaSchema = z.object({
 });
 
 export type TiendaFormData = z.infer<typeof tiendaSchema>;
+
+// ============================================
+// VALIDACIONES PARA GUÍAS DE REMISIÓN
+// ============================================
+
+export const guiaSchema = z.object({
+  tipo: z.enum(['envio', 'recojo'], {
+    required_error: 'Debe seleccionar un tipo de guía',
+  }),
+  
+  fecha_inicio_traslado: z
+    .string()
+    .min(1, 'La fecha es obligatoria')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido'),
+  
+  tienda_id: z
+    .number({
+      required_error: 'Debe seleccionar una tienda',
+      invalid_type_error: 'Debe seleccionar una tienda válida',
+    })
+    .int()
+    .positive('Debe seleccionar una tienda válida'),
+  
+  nro_orden: z
+    .string()
+    .min(1, 'El número de orden es obligatorio')
+    .max(20, 'Máximo 20 caracteres')
+    .regex(/^[A-Za-z0-9\-]+$/, 'Solo se permiten letras, números y guiones'),
+  
+  observacion: z
+    .string()
+    .max(200, 'Máximo 200 caracteres')
+    .optional()
+    .or(z.literal('')),
+  
+  detalle: z
+    .array(
+      z.object({
+        cantidad: z
+          .number({
+            required_error: 'La cantidad es obligatoria',
+            invalid_type_error: 'La cantidad debe ser un número',
+          })
+          .int('La cantidad debe ser un número entero')
+          .positive('La cantidad debe ser mayor a 0'),
+        
+        sku_id: z
+          .number({
+            required_error: 'Debe seleccionar un SKU',
+            invalid_type_error: 'Debe seleccionar un SKU válido',
+          })
+          .int()
+          .positive('Debe seleccionar un SKU válido'),
+        
+        serie: z
+          .string()
+          .max(50, 'Máximo 50 caracteres')
+          .optional()
+          .or(z.literal('')),
+      })
+    )
+    .min(1, 'Debe agregar al menos un SKU'),
+});
+
+export type GuiaFormData = z.infer<typeof guiaSchema>;

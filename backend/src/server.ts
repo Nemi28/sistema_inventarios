@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes';
 import skuRoutes from './routes/sku.routes';
 import socioRoutes from './routes/socio.routes';
 import tiendaRoutes from './routes/tienda.routes';
+import guiasRoutes from './routes/guias.routes';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 
 // Configurar variables de entorno
@@ -19,6 +20,7 @@ const PORT = process.env.PORT || 4000;
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
+  exposedHeaders: ['Content-Disposition'],
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -44,6 +46,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/skus', skuRoutes);
 app.use('/api/socios', socioRoutes);
 app.use('/api/tiendas', tiendaRoutes);
+app.use('/api/guias', guiasRoutes);
 // Middleware de rutas no encontradas
 app.use(notFound);
 
