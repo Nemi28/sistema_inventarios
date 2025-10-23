@@ -13,6 +13,7 @@ import NotFound from './pages/NotFound';
 import { SKUsPage } from './features/skus/components/SKUsPage';
 import { SociosPage } from './features/socios/components/SociosPage';
 import { TiendasPage } from './features/tiendas/components/TiendasPage';
+import { GuiasPage } from './features/guias/components/GuiasPage';
 
 function App() {
   return (
@@ -51,7 +52,7 @@ function App() {
             <Route path="/skus" element={<SKUsPage />} />
             <Route path="/socios" element={<SociosPage />} />
             <Route path="/tiendas" element={<TiendasPage />} />
-            
+            <Route path="/guias" element={<GuiasPage />} />
             {/* 🔹 Aquí se agregarán más rutas privadas en el futuro */}
           </Route>
 
