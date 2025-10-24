@@ -198,7 +198,7 @@ const Login: React.FC = () => {
             </Button>
           </form>
 
-          {/* Link a registro */}
+          {/* Link a registro 
           <div className="text-center pt-4 border-t border-gray-200">
             <p className="text-sm text-gray-600">
               ¿No tienes una cuenta?{' '}
@@ -209,7 +209,7 @@ const Login: React.FC = () => {
                 Regístrate aquí
               </Link>
             </p>
-          </div>
+          </div>*/}
         </div>
 
         {/* Footer */}
