@@ -28,9 +28,9 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Plus } from 'lucide-react';
 import { guiaSchema, GuiaFormData } from '@/lib/validations';
 import { useGenerarGuia } from '../hooks/useGenerarGuia';
-import { useTiendasActivas } from '../hooks/useTiendasActivas';
 import { TipoGuiaSelector } from './TipoGuiaSelector';
 import { DetalleSkuRow } from './DetalleSkuRow';
+import { TiendaCombobox} from './TiendaCombobox';
 
 interface GuiaFormModalProps {
   open: boolean;
@@ -39,7 +39,6 @@ interface GuiaFormModalProps {
 
 export const GuiaFormModal = ({ open, onOpenChange }: GuiaFormModalProps) => {
   const generarMutation = useGenerarGuia();
-  const { data: tiendas = [], isLoading: isLoadingTiendas } = useTiendasActivas();
 
   const form = useForm<GuiaFormData>({
     resolver: zodResolver(guiaSchema),
@@ -121,44 +120,8 @@ export const GuiaFormModal = ({ open, onOpenChange }: GuiaFormModalProps) => {
                 )}
               />
 
-              {/* Tienda (origen o destino según tipo) */}
-              <FormField
-                control={form.control}
-                name="tienda_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-gray-900 font-semibold">
-                      {tipo === 'envio' ? 'Tienda Destino *' : 'Tienda Origen *'}
-                    </FormLabel>
-                    <Select
-                      onValueChange={(val) => field.onChange(parseInt(val))}
-                      value={field.value?.toString()}
-                      disabled={isLoadingTiendas}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar tienda" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {tiendas.map((tienda) => (
-                          <SelectItem key={tienda.id} value={tienda.id.toString()}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">
-                                {tienda.pdv} - {tienda.nombre_tienda}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {tienda.direccion}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                {/* Tienda (origen o destino según tipo) - Con buscador */}
+                <TiendaCombobox control={form.control} tipo={tipo} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
