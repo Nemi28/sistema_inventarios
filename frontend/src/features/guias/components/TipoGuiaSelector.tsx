@@ -52,7 +52,7 @@ export const TipoGuiaSelector = ({ control }: TipoGuiaSelectorProps) => {
                   <div className="flex-1">
                     <div className="font-semibold text-gray-900">Envío</div>
                     <div className="text-sm text-gray-500">
-                      Enviar productos a tienda
+                      Enviar equipos a tienda
                     </div>
                   </div>
                 </label>
@@ -86,7 +86,7 @@ export const TipoGuiaSelector = ({ control }: TipoGuiaSelectorProps) => {
                   <div className="flex-1">
                     <div className="font-semibold text-gray-900">Recojo</div>
                     <div className="text-sm text-gray-500">
-                      Recoger productos de tienda
+                      Recoger equipos de tienda
                     </div>
                   </div>
                 </label>

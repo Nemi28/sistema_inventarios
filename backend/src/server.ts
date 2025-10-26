@@ -1,12 +1,13 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectDatabase } from './config/database';
+import { connectDatabase, pool } from './config/database';
 import authRoutes from './routes/auth.routes';
 import skuRoutes from './routes/sku.routes';
 import socioRoutes from './routes/socio.routes';
 import tiendaRoutes from './routes/tienda.routes';
-import guiasRoutes from './routes/guias.routes';
+import guiaRoutes from './routes/guias.routes';
+import categoriaRoutes from './routes/categoria.routes';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 
 // Configurar variables de entorno
@@ -34,11 +35,33 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       skus: '/api/skus',
-      socio: '/api/socios',
+      socios: '/api/socios',
       tiendas: '/api/tiendas',
+      categorias: '/api/categorias',
+      guias: '/api/guias',
+      health: '/health',
       docs: '/api/docs',
     },
   });
+});
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'connected',
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      database: 'disconnected',
+    });
+  }
 });
 
 // Rutas de la API
@@ -46,7 +69,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/skus', skuRoutes);
 app.use('/api/socios', socioRoutes);
 app.use('/api/tiendas', tiendaRoutes);
-app.use('/api/guias', guiasRoutes);
+app.use('/api/guias', guiaRoutes);
+app.use('/api/categorias', categoriaRoutes);
+
 // Middleware de rutas no encontradas
 app.use(notFound);
 
@@ -69,6 +94,7 @@ const startServer = async () => {
 ║   📡 URL: http://localhost:${PORT}                  ║
 ║   🌍 Entorno: ${process.env.NODE_ENV || 'development'}              ║
 ║   📚 API Docs: http://localhost:${PORT}/api         ║
+║   💚 Health: http://localhost:${PORT}/health        ║
 ║                                                   ║
 ╚═══════════════════════════════════════════════════╝
       `);
@@ -78,5 +104,22 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// Función para cerrar gracefully
+async function shutdownGracefully(signal: string) {
+  console.log(`\n⚠️  ${signal} recibido. Cerrando servidor gracefully...`);
+  try {
+    await pool.end();
+    console.log('✅ Conexión a BD cerrada correctamente');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error al cerrar conexiones:', error);
+    process.exit(1);
+  }
+}
+
+// Escuchar señales de terminación
+process.on('SIGTERM', () => shutdownGracefully('SIGTERM'));
+process.on('SIGINT', () => shutdownGracefully('SIGINT'));
 
 startServer();

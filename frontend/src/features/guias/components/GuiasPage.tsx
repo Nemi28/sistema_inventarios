@@ -42,8 +42,8 @@ export const GuiasPage = () => {
               </div>
               <h3 className="font-semibold text-gray-900">Tipo de Guía</h3>
               <p className="text-sm text-gray-600">
-                Selecciona si es una guía de <strong>envío</strong> (productos a
-                tienda) o <strong>recojo</strong> (productos desde tienda).
+                Selecciona si es una guía de <strong>envío</strong> (equipos a
+                tienda) o <strong>recojo</strong> (equipos desde tienda).
               </p>
             </div>
 
@@ -86,9 +86,8 @@ export const GuiasPage = () => {
                 Guía de Envío
               </h3>
               <p className="text-sm text-blue-800">
-                Para enviar productos <strong>hacia una tienda</strong>. El
-                destino será la tienda seleccionada y el origen será el almacén
-                central.
+                Para enviar equipos <strong>hacia una tienda</strong>. El
+                destino será la tienda seleccionada y el origen será COSB San Borja.
               </p>
             </div>
           </div>
@@ -104,9 +103,8 @@ export const GuiasPage = () => {
                 Guía de Recojo
               </h3>
               <p className="text-sm text-green-800">
-                Para recoger productos <strong>desde una tienda</strong>. El
-                origen será la tienda seleccionada y el destino será el almacén
-                central.
+                Para recoger equipos <strong>desde una tienda</strong>. El
+                origen será la tienda seleccionada y el destino será COSB San Borja.
               </p>
             </div>
           </div>

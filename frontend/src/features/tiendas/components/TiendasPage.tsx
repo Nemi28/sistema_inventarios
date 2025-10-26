@@ -87,7 +87,7 @@ export const TiendasPage = () => {
             Gestión de Tiendas
           </h1>
           <p className="text-gray-500 mt-1">
-            Administra las tiendas del sistema
+            Administra todas las Tiendas
           </p>
         </div>
         <Button onClick={handleCreate} className="w-full sm:w-auto">

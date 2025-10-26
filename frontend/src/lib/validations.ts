@@ -198,3 +198,21 @@ export const guiaSchema = z.object({
 });
 
 export type GuiaFormData = z.infer<typeof guiaSchema>;
+
+// ============================================
+// VALIDACIONES CATEGORÍA
+// ============================================
+export const categoriaSchema = z.object({
+  nombre: z
+    .string()
+    .min(2, 'El nombre debe tener al menos 2 caracteres')
+    .max(50, 'El nombre no puede tener más de 50 caracteres')
+    .regex(
+      /^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\.\-_&]+$/,
+      'Solo se permiten letras, números, espacios, puntos, guiones, guion bajo y "&"'
+    )
+    .trim(),
+  activo: z.boolean().default(true),
+});
+
+export type CategoriaFormData = z.infer<typeof categoriaSchema>;

@@ -282,3 +282,44 @@ export const validarActualizarTienda: ValidationChain[] = [
     .isBoolean()
     .withMessage('El campo activo debe ser true o false'),
 ];
+
+// ============================================
+// VALIDACIONES PARA CATEGORÍAS
+// ============================================
+
+/**
+ * Validaciones para crear CATEGORÍA
+ */
+export const validarCrearCategoria: ValidationChain[] = [
+  body('nombre')
+    .notEmpty()
+    .withMessage('El nombre de la categoría es obligatorio')
+    .isLength({ min: 2, max: 50 })
+    .withMessage('El nombre debe tener entre 2 y 50 caracteres')
+    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\.\-_&]+$/)
+    .withMessage('El nombre solo puede contener letras, números, espacios, puntos, guiones, guion bajo o "&"')
+    .trim(),
+
+  body('activo')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo activo debe ser true o false'),
+];
+
+/**
+ * Validaciones para actualizar CATEGORÍA
+ */
+export const validarActualizarCategoria: ValidationChain[] = [
+  body('nombre')
+    .optional()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('El nombre debe tener entre 2 y 50 caracteres')
+    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\.\-_&]+$/)
+    .withMessage('El nombre solo puede contener letras, números, espacios, puntos, guiones, guion bajo o "&"')
+    .trim(),
+
+  body('activo')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo activo debe ser true o false'),
+];

@@ -24,11 +24,26 @@ export const menuItems: MenuItem[] = [
     roles: ['administrador', 'gestor', 'operador']
   },
   {
-    id: 'skus',
-    label: 'SKUs',
-    icon: Tag,
-    path: '/skus',
-    roles: ['administrador', 'gestor', 'operador']
+    id: 'equipos',
+    label: 'Equipos',
+    icon: Package,
+    roles: ['administrador', 'gestor', 'operador'],
+    children: [
+      {
+        id: 'equipos-skus',
+        label: 'SKUs',
+        icon: Tag,
+        path: '/skus',
+        roles: ['administrador', 'gestor', 'operador']
+      },
+      {
+        id: 'equipos-categorias',
+        label: 'Categorías',
+        icon: FolderOpen,
+        path: '/categorias',
+        roles: ['administrador', 'gestor']
+      }
+    ]
   },
   {
     id: 'socios',
@@ -50,35 +65,6 @@ export const menuItems: MenuItem[] = [
     icon: FileText,
     path: '/guias',
     roles: ['administrador', 'gestor']
-  },
-  {
-    id: 'productos',
-    label: 'Productos',
-    icon: Package,
-    roles: ['administrador', 'gestor', 'operador'],
-    children: [
-      {
-        id: 'productos-ver',
-        label: 'Ver Productos',
-        icon: List,
-        path: '/productos',
-        roles: ['administrador', 'gestor', 'operador']
-      },
-      {
-        id: 'productos-agregar',
-        label: 'Agregar Producto',
-        icon: Plus,
-        path: '/productos/agregar',
-        roles: ['administrador', 'gestor']
-      },
-      {
-        id: 'productos-categorias',
-        label: 'Categorías',
-        icon: FolderOpen,
-        path: '/productos/categorias',
-        roles: ['administrador', 'gestor']
-      }
-    ]
   },
   {
     id: 'inventario',
@@ -154,6 +140,7 @@ export const menuItems: MenuItem[] = [
   }
 ];
 
+// Función helper para filtrar items por rol
 // Función helper para filtrar items por rol
 export const filterMenuByRole = (items: MenuItem[], userRole: string): MenuItem[] => {
   return items
