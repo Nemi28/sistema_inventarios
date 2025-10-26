@@ -76,7 +76,7 @@ const confirmDelete = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestión de Socios</h1>
           <p className="text-gray-500 mt-1">
-            Administra los socios de negocio del sistema
+            Administra los socios de negocio
           </p>
         </div>
         <Button onClick={handleCreate} className="w-full sm:w-auto">

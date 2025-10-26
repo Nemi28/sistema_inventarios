@@ -175,7 +175,7 @@ export const GuiaFormModal = ({ open, onOpenChange }: GuiaFormModalProps) => {
                 <div>
                   <h3 className="text-base sm:text-lg font-semibold">Detalle de SKUs</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    Agregue los productos a incluir en la guía
+                    Agregue los equipos a incluir en la guía
                   </p>
                 </div>
                 <Button
