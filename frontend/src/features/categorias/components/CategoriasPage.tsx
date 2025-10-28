@@ -11,6 +11,7 @@ import { useSearchCategorias } from '../hooks/useSearchCategorias';
 import { useDeleteCategoria } from '../hooks/useDeleteCategoria';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Categoria } from '../types';
 
 export const CategoriasPage = () => {
@@ -26,6 +27,10 @@ export const CategoriasPage = () => {
   // Hooks personalizados
   const debouncedSearch = useDebounce(searchTerm, 500);
   const { isOpen, open, close } = useDisclosure();
+  const { hasPermission } = usePermissions();
+
+  // Permisos
+  const canCreateEdit = hasPermission(['gestor', 'administrador']);
 
   // Mutations
   const deleteMutation = useDeleteCategoria();
@@ -78,10 +83,12 @@ export const CategoriasPage = () => {
             Administra las categorías de los equipos
           </p>
         </div>
-        <Button onClick={handleCreate} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva Categoría
-        </Button>
+        {canCreateEdit && (
+          <Button onClick={handleCreate} className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Categoría
+          </Button>
+        )}
       </div>
 
       {/* Búsqueda y Filtros */}

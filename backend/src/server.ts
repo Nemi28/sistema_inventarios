@@ -9,6 +9,7 @@ import tiendaRoutes from './routes/tienda.routes';
 import guiaRoutes from './routes/guias.routes';
 import categoriaRoutes from './routes/categoria.routes';
 import equiposRoutes from './routes/equipos.routes';
+import ordenCompraRoutes from './routes/orden_compra.routes';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 
 // Configurar variables de entorno
@@ -40,6 +41,7 @@ app.get('/', (req, res) => {
       tiendas: '/api/tiendas',
       categorias: '/api/categorias',
       equipos: '/api/equipos',
+      ordenes_compra: '/api/ordenes-compra',
       guias: '/api/guias',
       health: '/health',
       docs: '/api/docs',
@@ -74,6 +76,7 @@ app.use('/api/tiendas', tiendaRoutes);
 app.use('/api/guias', guiaRoutes);
 app.use('/api/categorias', categoriaRoutes);
 app.use('/api/equipos', equiposRoutes);
+app.use('/api/ordenes-compra', ordenCompraRoutes);
 
 // Middleware de rutas no encontradas
 app.use(notFound);

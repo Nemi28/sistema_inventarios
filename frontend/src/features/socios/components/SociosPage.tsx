@@ -11,6 +11,7 @@ import { useSearchSocios } from '../hooks/useSearchSocios';
 import { useDeleteSocio } from '../hooks/useDeleteSocio';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useDisclosure } from '@/hooks/useDisclosure';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Socio } from '../types';
 
 export const SociosPage = () => {
@@ -26,6 +27,10 @@ export const SociosPage = () => {
   // Hooks personalizados
   const debouncedSearch = useDebounce(searchTerm, 500);
   const { isOpen, open, close } = useDisclosure();
+  const { hasPermission } = usePermissions();
+
+  // Permisos
+  const canCreateEdit = hasPermission(['gestor', 'administrador']);
 
   // Mutations
   const deleteMutation = useDeleteSocio();
@@ -54,15 +59,15 @@ export const SociosPage = () => {
     setDeletingItem(socio);
   };
 
-const confirmDelete = () => {
-  if (deletingItem) {
-    deleteMutation.mutate({ id: deletingItem.id, socio: deletingItem }, {
-      onSuccess: () => {
-        setDeletingItem(null);
-      }
-    });
-  }
-};
+  const confirmDelete = () => {
+    if (deletingItem) {
+      deleteMutation.mutate({ id: deletingItem.id, socio: deletingItem }, {
+        onSuccess: () => {
+          setDeletingItem(null);
+        }
+      });
+    }
+  };
 
   const handleCloseModal = () => {
     setEditingSocio(null);
@@ -79,10 +84,12 @@ const confirmDelete = () => {
             Administra los socios de negocio
           </p>
         </div>
-        <Button onClick={handleCreate} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Socio
-        </Button>
+        {canCreateEdit && (
+          <Button onClick={handleCreate} className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Socio
+          </Button>
+        )}
       </div>
 
       {/* Búsqueda y Filtros */}
