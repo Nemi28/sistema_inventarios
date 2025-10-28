@@ -9,12 +9,16 @@ import Register from './pages/auth/Register';
 import Dashboard from './pages/Dashboard';
 import NotFound from './pages/NotFound';
 
-
 import { SKUsPage } from './features/skus/components/SKUsPage';
 import { SociosPage } from './features/socios/components/SociosPage';
 import { TiendasPage } from './features/tiendas/components/TiendasPage';
 import { GuiasPage } from './features/guias/components/GuiasPage';
-import {CategoriasPage} from './features/categorias/components/CategoriasPage';
+import { CategoriasPage } from './features/categorias/components/CategoriasPage';
+import { EquiposPage } from './features/equipos/components/EquiposPage';
+import { OrdenesCompraPage } from './features/ordenes_compra/components/OrdenesCompraPage';
+
+
+
 
 function App() {
   return (
@@ -48,14 +52,13 @@ function App() {
             }
           >
             <Route path="/dashboard" element={<Dashboard />} />
-            
-           
             <Route path="/skus" element={<SKUsPage />} />
             <Route path="/socios" element={<SociosPage />} />
             <Route path="/tiendas" element={<TiendasPage />} />
             <Route path="/guias" element={<GuiasPage />} />
             <Route path="/categorias" element={<CategoriasPage />} />
-            {/* 🔹 Aquí se agregarán más rutas privadas en el futuro */}
+            <Route path="/equipos" element={<EquiposPage />} />
+            <Route path="/ordenes-compra" element={<OrdenesCompraPage />} />
           </Route>
 
           {/* Ruta raíz - redirige al dashboard si está autenticado */}

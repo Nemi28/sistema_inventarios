@@ -11,7 +11,8 @@ import {
   Plus,
   List,
   Tag,
-  Store
+  Store,
+  Laptop
 } from 'lucide-react';
 import { MenuItem } from '../types/menu.types';
 
@@ -29,6 +30,20 @@ export const menuItems: MenuItem[] = [
     icon: Package,
     roles: ['administrador', 'gestor', 'operador'],
     children: [
+      {
+        id: 'equipos-inventario',
+        label: 'Inventario de Equipos',
+        icon: Laptop,
+        path: '/equipos',
+        roles: ['administrador', 'gestor', 'operador']
+      },
+      {
+      id: 'equipos-ordenes',
+      label: 'Órdenes de Compra',
+      icon: ShoppingCart,
+      path: '/ordenes-compra',
+      roles: ['administrador', 'gestor', 'operador']
+      },
       {
         id: 'equipos-skus',
         label: 'SKUs',
@@ -140,7 +155,6 @@ export const menuItems: MenuItem[] = [
   }
 ];
 
-// Función helper para filtrar items por rol
 // Función helper para filtrar items por rol
 export const filterMenuByRole = (items: MenuItem[], userRole: string): MenuItem[] => {
   return items
