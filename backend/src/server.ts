@@ -8,6 +8,7 @@ import socioRoutes from './routes/socio.routes';
 import tiendaRoutes from './routes/tienda.routes';
 import guiaRoutes from './routes/guias.routes';
 import categoriaRoutes from './routes/categoria.routes';
+import equiposRoutes from './routes/equipos.routes';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 
 // Configurar variables de entorno
@@ -38,6 +39,7 @@ app.get('/', (req, res) => {
       socios: '/api/socios',
       tiendas: '/api/tiendas',
       categorias: '/api/categorias',
+      equipos: '/api/equipos',
       guias: '/api/guias',
       health: '/health',
       docs: '/api/docs',
@@ -71,6 +73,7 @@ app.use('/api/socios', socioRoutes);
 app.use('/api/tiendas', tiendaRoutes);
 app.use('/api/guias', guiaRoutes);
 app.use('/api/categorias', categoriaRoutes);
+app.use('/api/equipos', equiposRoutes);
 
 // Middleware de rutas no encontradas
 app.use(notFound);
