@@ -69,9 +69,7 @@ export const validateGenerarGuia = [
   body('detalle.*.serie')
     .optional()
     .isString()
-    .withMessage('La serie debe ser texto')
-    .isLength({ max: 50 })
-    .withMessage('La serie no puede exceder 50 caracteres'),
+    .withMessage('La serie debe ser texto'),
 
   // Middleware para manejar errores de validación
   (req: Request, res: Response, next: NextFunction) => {

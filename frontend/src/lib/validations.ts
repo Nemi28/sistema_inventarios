@@ -189,7 +189,6 @@ export const guiaSchema = z.object({
         
         serie: z
           .string()
-          .max(50, 'Máximo 50 caracteres')
           .optional()
           .or(z.literal('')),
       })
