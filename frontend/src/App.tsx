@@ -9,6 +9,7 @@ import Register from './pages/auth/Register';
 import NotFound from './pages/NotFound';
 
 import { DashboardPage } from './features/dashboard/components/DashboardPage';
+import { PerfilPage } from './features/perfil/components/PerfilPage';
 import { SKUsPage } from './features/skus/components/SKUsPage';
 import { SociosPage } from './features/socios/components/SociosPage';
 import { TiendasPage } from './features/tiendas/components/TiendasPage';
@@ -52,6 +53,7 @@ function App() {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/perfil" element={<PerfilPage />} />
             <Route path="/skus" element={<SKUsPage />} />
             <Route path="/socios" element={<SociosPage />} />
             <Route path="/tiendas" element={<TiendasPage />} />
