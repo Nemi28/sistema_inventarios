@@ -63,4 +63,5 @@ class TokenService {
   }
 }
 
-export default new TokenService();
+const tokenService = new TokenService();
+export default tokenService;
