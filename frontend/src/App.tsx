@@ -6,9 +6,9 @@ import PublicRoute from './components/auth/PublicRoute';
 import MainLayout from './components/layout/MainLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-import Dashboard from './pages/Dashboard';
 import NotFound from './pages/NotFound';
 
+import { DashboardPage } from './features/dashboard/components/DashboardPage';
 import { SKUsPage } from './features/skus/components/SKUsPage';
 import { SociosPage } from './features/socios/components/SociosPage';
 import { TiendasPage } from './features/tiendas/components/TiendasPage';
@@ -51,7 +51,7 @@ function App() {
               </PrivateRoute>
             }
           >
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/skus" element={<SKUsPage />} />
             <Route path="/socios" element={<SociosPage />} />
             <Route path="/tiendas" element={<TiendasPage />} />
