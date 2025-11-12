@@ -6,6 +6,8 @@ import PublicRoute from './components/auth/PublicRoute';
 import MainLayout from './components/layout/MainLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 import NotFound from './pages/NotFound';
 
 import { DashboardPage } from './features/dashboard/components/DashboardPage';
@@ -40,6 +42,22 @@ function App() {
             element={
               <PublicRoute>
                 <Register />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicRoute>
+                <ForgotPassword />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <PublicRoute>
+                <ResetPassword />
               </PublicRoute>
             }
           />

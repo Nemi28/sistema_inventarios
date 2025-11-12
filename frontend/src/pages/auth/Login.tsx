@@ -6,6 +6,7 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Alert from '../../components/common/Alert';
 import { isValidEmail } from '../../utils/validators';
+import { Link } from 'react-router-dom';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -196,6 +197,15 @@ const Login: React.FC = () => {
             >
               Iniciar Sesión
             </Button>
+            {/* Link olvidé mi contraseña */}
+<div className="text-center">
+  <Link
+    to="/forgot-password"
+    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+  >
+    ¿Olvidaste tu contraseña?
+  </Link>
+</div>
           </form>
 
           {/* Link a registro 

@@ -1,8 +1,12 @@
-import { User, Mail, Shield, Calendar } from 'lucide-react';
+import { useState } from 'react';
+import { User, Mail, Shield, Calendar, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { CambiarPasswordModal } from './CambiarPasswordModal';
 
 export const PerfilPage = () => {
   const { user } = useAuth();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -39,10 +43,21 @@ export const PerfilPage = () => {
 
       {/* Información del perfil */}
       <div className="bg-white rounded-xl shadow-lg p-8">
-        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-          <Shield className="h-6 w-6 text-blue-600" />
-          Información del Perfil
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Shield className="h-6 w-6 text-blue-600" />
+            Información del Perfil
+          </h3>
+          <Button
+            onClick={() => setShowPasswordModal(true)}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Lock size={16} />
+            Cambiar Contraseña
+          </Button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* ID */}
@@ -150,6 +165,12 @@ export const PerfilPage = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de cambiar contraseña */}
+      <CambiarPasswordModal
+        open={showPasswordModal}
+        onOpenChange={setShowPasswordModal}
+      />
     </div>
   );
 };
