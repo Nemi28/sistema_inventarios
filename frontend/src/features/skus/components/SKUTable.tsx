@@ -26,13 +26,13 @@ export const SKUTable = ({
   onDelete,
 }: SKUTableProps) => {
   // Configurar metadatos para las columnas
-  const columnsWithMeta = columns.map((col) => ({
-    ...col,
-    meta: {
-      onEdit,
-      onDelete,
-    },
-  }));
+ //onst columnsWithMeta = columns.map((col) => ({
+   //..col,
+   //eta: {
+     //nEdit,
+     //nDelete,
+   //,
+ //));
 
   if (!isLoading && data.length === 0) {
     return (

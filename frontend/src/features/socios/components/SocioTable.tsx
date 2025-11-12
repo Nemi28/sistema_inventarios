@@ -26,13 +26,13 @@ export const SocioTable = ({
   onDelete,
 }: SocioTableProps) => {
   // Configurar metadatos para las columnas
-  const columnsWithMeta = columns.map((col) => ({
-    ...col,
-    meta: {
-      onEdit,
-      onDelete,
-    },
-  }));
+ //onst columnsWithMeta = columns.map((col) => ({
+  //...col,
+   //eta: {
+    //onEdit,
+   // onDelete,
+  //},
+ //));
 
   if (!isLoading && data.length === 0) {
     return (

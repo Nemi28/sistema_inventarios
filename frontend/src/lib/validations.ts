@@ -59,7 +59,7 @@ export const socioSchema = z.object({
     .min(3, 'La razón social debe tener al menos 3 caracteres')
     .max(50, 'La razón social no puede tener más de 50 caracteres')
     .regex(
-      /^[A-Za-z0-9\s\.\-&]+$/,
+      /^[A-Za-z0-9\s.&-]+$/,
       'Solo se permiten letras, números, espacios, puntos, guiones y "&"'
     )
     .trim(),
@@ -106,7 +106,7 @@ export const tiendaSchema = z.object({
     .min(3, 'El nombre debe tener al menos 3 caracteres')
     .max(50, 'El nombre no puede exceder 50 caracteres')
     .regex(
-      /^[A-Za-z0-9\s\.\-&]+$/,
+      /^[A-Za-z0-9\s.&-]+$/,
       'Solo se permiten letras, números, espacios, puntos, guiones y "&"'
     ),
   
@@ -160,7 +160,7 @@ export const guiaSchema = z.object({
     .string()
     .min(1, 'El número de orden es obligatorio')
     .max(20, 'Máximo 20 caracteres')
-    .regex(/^[A-Za-z0-9\-]+$/, 'Solo se permiten letras, números y guiones'),
+    .regex(/^[A-Za-z0-9-]+$/, 'Solo se permiten letras, números y guiones'),
   
   observacion: z
     .string()
@@ -207,7 +207,7 @@ export const categoriaSchema = z.object({
     .min(2, 'El nombre debe tener al menos 2 caracteres')
     .max(50, 'El nombre no puede tener más de 50 caracteres')
     .regex(
-      /^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\.\-_&]+$/,
+      /^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s._&-]+$/,
       'Solo se permiten letras, números, espacios, puntos, guiones, guion bajo y "&"'
     )
     .trim(),
