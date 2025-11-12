@@ -113,6 +113,6 @@ export const ANCHOS_COLUMNAS = {
     gre_id: 15,
     cantidad: 15,
     sku: 20,
-    serie: 25,
+    serie: 200,
   },
 };
