@@ -58,10 +58,10 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }) => {
             {/* Logo and title */}
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">SI</span>
+                <span className="text-white font-bold text-sm">SIGA</span>
               </div>
               <h1 className="text-xl font-bold text-gray-900 hidden sm:block">
-                Sistema de Inventarios
+                GESTIÓN DE ACTIVOS
               </h1>
             </div>
           </div>

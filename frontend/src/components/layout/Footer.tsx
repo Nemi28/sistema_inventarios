@@ -12,28 +12,6 @@ const Footer: React.FC = () => {
             <p>&copy; {currentYear} Sistema de Inventarios. Todos los derechos reservados.</p>
           </div>
 
-          {/* Links */}
-          <div className="flex space-x-6 text-sm">
-            <button
-              className="hover:text-white transition-colors duration-200"
-              onClick={() => {}}
-            >
-              Documentación
-            </button>
-            <button
-              className="hover:text-white transition-colors duration-200"
-              onClick={() => {}}
-            >
-              Soporte
-            </button>
-            <button
-              className="hover:text-white transition-colors duration-200"
-              onClick={() => {}}
-            >
-              Términos
-            </button>
-          </div>
-
           {/* Version */}
           <div className="text-sm">
             <span className="text-gray-500">v1.0.0</span>

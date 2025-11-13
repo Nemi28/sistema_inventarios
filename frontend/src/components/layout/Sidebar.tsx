@@ -40,10 +40,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed }) => {
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-800">
             {!isCollapsed && (
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">SI</span>
-                </div>
-                <span className="text-white font-semibold text-lg">Inventarios</span>
+              {/*  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                   <span className="text-white font-bold text-sm">SIGA</span>
+                </div>*/}
+                <span className="text-white font-semibold text-lg">MENÚ</span>
               </div>
             )}
             

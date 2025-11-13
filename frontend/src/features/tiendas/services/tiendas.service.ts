@@ -76,3 +76,10 @@ export const reactivarTienda = async (
   console.log('📥 Respuesta del backend:', data);
   return data.data;
 };
+
+export const obtenerTiendas = async (): Promise<Tienda[]> => {
+  const { data } = await api.get<PaginatedResponse<Tienda>>('/api/tiendas', {
+    params: { limit: 1000 } // Obtener todas las tiendas
+  });
+  return data.data;
+};
