@@ -12,7 +12,8 @@ import {
   List,
   Tag,
   Store,
-  Laptop
+  Laptop,
+  ClipboardList
 } from 'lucide-react';
 import { MenuItem } from '../types/menu.types';
 
@@ -38,11 +39,11 @@ export const menuItems: MenuItem[] = [
         roles: ['administrador', 'gestor', 'operador']
       },
       {
-      id: 'equipos-ordenes',
-      label: 'Órdenes de Compra',
-      icon: ShoppingCart,
-      path: '/ordenes-compra',
-      roles: ['administrador', 'gestor', 'operador']
+        id: 'equipos-ordenes',
+        label: 'Órdenes de Compra',
+        icon: ShoppingCart,
+        path: '/ordenes-compra',
+        roles: ['administrador', 'gestor', 'operador']
       },
       {
         id: 'equipos-skus',
@@ -75,11 +76,26 @@ export const menuItems: MenuItem[] = [
     roles: ['administrador', 'gestor', 'operador']
   },
   {
-    id: 'guias',
-    label: 'Guías de Remisión',
+    id: 'documentos',
+    label: 'Generador Documentos',
     icon: FileText,
-    path: '/guias',
-    roles: ['administrador', 'gestor']
+    roles: ['administrador', 'gestor'],
+    children: [
+      {
+        id: 'documentos-guias',
+        label: 'Guías de Remisión',
+        icon: FileText,
+        path: '/guias',
+        roles: ['administrador', 'gestor']
+      },
+      {
+        id: 'documentos-actas',
+        label: 'Actas',
+        icon: ClipboardList,
+        path: '/actas',
+        roles: ['administrador', 'gestor']
+      }
+    ]
   },
   {
     id: 'inventario',

@@ -12,6 +12,7 @@ import equiposRoutes from './routes/equipos.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import passwordRoutes from './routes/password.routes';
 import ordenCompraRoutes from './routes/orden_compra.routes';
+import actaRoutes from './routes/acta.routes';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 
 // Configurar variables de entorno
@@ -82,6 +83,7 @@ app.use('/api/equipos', equiposRoutes);
 app.use('/api/ordenes-compra', ordenCompraRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/password', passwordRoutes);
+app.use('/api/actas', actaRoutes);
 
 // Middleware de rutas no encontradas
 app.use(notFound);

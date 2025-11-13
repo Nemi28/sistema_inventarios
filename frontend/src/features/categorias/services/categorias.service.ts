@@ -68,3 +68,9 @@ export const reactivarCategoria = async (id: number): Promise<Categoria> => {
   );
   return data.data;
 };
+export const obtenerCategorias = async (): Promise<Categoria[]> => {
+  const { data } = await api.get<PaginatedResponse<Categoria>>('/api/categorias', {
+    params: { limit: 1000 } // Obtener todas las categorías
+  });
+  return data.data;
+};
