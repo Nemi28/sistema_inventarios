@@ -515,7 +515,12 @@ const EquipoEntregadoRow: React.FC<any> = ({
     defaultValue: '',
   });
 
-  const esLaptopODesktop = equipoSeleccionado?.toUpperCase() === 'LAPTOP' || equipoSeleccionado?.toUpperCase() === 'DESKTOP';
+
+  const esLaptopODesktop = 
+  equipoSeleccionado?.toUpperCase() === 'LAPTOP' || 
+  equipoSeleccionado?.toUpperCase() === 'DESKTOP' ||
+  equipoSeleccionado?.toUpperCase() === 'DISCO SOLIDO' ||
+  equipoSeleccionado?.toUpperCase() === 'DISCO DURO';
 
   return (
     <div className="border border-gray-200 rounded-lg p-4 space-y-3">
@@ -658,7 +663,11 @@ const EquipoRecojoRow: React.FC<any> = ({
     defaultValue: '',
   });
 
- const esLaptopODesktop = equipoSeleccionado?.toUpperCase() === 'LAPTOP' || equipoSeleccionado?.toUpperCase() === 'DESKTOP';
+const esLaptopODesktop = 
+  equipoSeleccionado?.toUpperCase() === 'LAPTOP' || 
+  equipoSeleccionado?.toUpperCase() === 'DESKTOP' ||
+  equipoSeleccionado?.toUpperCase() === 'DISCO SOLIDO' ||
+  equipoSeleccionado?.toUpperCase() === 'DISCO DURO';
 
   return (
     <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-orange-50">
