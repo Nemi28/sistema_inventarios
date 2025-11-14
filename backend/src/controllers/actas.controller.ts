@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { ActaPDFService } from '../services/actaPDF.service';
-import { GenerarActaRequest } from '../types/actas.types';
+import { GenerarActaRequest, EquipoEntregado, EquipoRecojo } from '../types/actas.types';
 
 export class ActasController {
   /**
@@ -40,8 +40,36 @@ export class ActasController {
         return;
       }
 
-      // Generar PDF
-      const pdfBuffer = await ActaPDFService.generarActaPDF(data);
+      // Limpiar datos: eliminar IDs antes de enviar al PDF
+      const datosLimpios: GenerarActaRequest = {
+        ...data,
+        equipos_entregados: data.equipos_entregados.map((equipo) => ({
+          equipo: equipo.equipo,
+          marca: equipo.marca,
+          modelo: equipo.modelo,
+          serie: equipo.serie,
+          inventario: equipo.inventario,
+          hostname: equipo.hostname,
+          procesador: equipo.procesador,
+          disco: equipo.disco,
+          ram: equipo.ram,
+        })),
+        equipos_recojo: data.equipos_recojo?.map((equipo) => ({
+          equipo: equipo.equipo,
+          marca: equipo.marca,
+          modelo: equipo.modelo,
+          serie: equipo.serie,
+          inventario: equipo.inventario,
+          hostname: equipo.hostname,
+          procesador: equipo.procesador,
+          disco: equipo.disco,
+          ram: equipo.ram,
+          estado: equipo.estado,
+        })),
+      };
+
+      // Generar PDF con datos limpios
+      const pdfBuffer = await ActaPDFService.generarActaPDF(datosLimpios);
 
       // Configurar headers para descarga
       res.setHeader('Content-Type', 'application/pdf');

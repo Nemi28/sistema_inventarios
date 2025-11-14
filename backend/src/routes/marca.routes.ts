@@ -23,9 +23,11 @@ router.get('/activas', verificarToken, marcaController.obtenerActivas);
 // GET /api/marcas/buscar?q=termino - Buscar marcas
 router.get('/buscar', verificarToken, marcaController.buscar);
 
+// GET /api/marcas/por-subcategoria/:subcategoriaId - Obtener marcas por subcategoría (para combos escalonados)
+router.get('/por-subcategoria/:subcategoriaId', verificarToken, marcaController.obtenerMarcasPorSubcategoria);
+
 // GET /api/marcas/:id - Obtener marca por ID
 router.get('/:id', verificarToken, marcaController.obtenerPorId);
-
 /**
  * Rutas protegidas (requieren rol gestor o administrador)
  */

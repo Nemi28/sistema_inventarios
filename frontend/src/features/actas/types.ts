@@ -1,7 +1,14 @@
 export interface EquipoEntregado {
-  equipo: string;
-  marca: string;
-  modelo: string;
+  // IDs para los combos (solo se usan en el frontend)
+  categoria_id: number;
+  subcategoria_id: number;
+  marca_id: number;
+  modelo_id: number;
+  
+  // Nombres que se envían al backend/PDF
+  equipo: string;           // Nombre de la subcategoría
+  marca: string;           // Nombre de la marca
+  modelo: string;          // Nombre del modelo
   serie: string;
   inventario: string;
   hostname?: string;
@@ -42,6 +49,8 @@ export const AREAS_OPTIONS = ['CAJA', 'VENTAS', 'ALMACEN'] as const;
 export const CARGOS_OPTIONS = [
   'CONTROLLER',
   'SUPERVISOR TIENDA',
+  'CAJERO',
+  'OPERADOR LOGISTICO',
   'ASESOR INTEGRAL',
   'JEFE DE CLUSTER',
   'ASESOR DE BIENVENIDA',

@@ -223,3 +223,18 @@ export const obtenerMarcasActivas = async (): Promise<Marca[]> => {
 
   return marcas as Marca[];
 };
+/**
+ * Obtener marcas que tienen modelos en una subcategoría específica
+ */
+export const obtenerMarcasPorSubcategoria = async (subcategoriaId: number): Promise<Marca[]> => {
+  const [marcas] = await pool.execute<RowDataPacket[]>(
+    `SELECT DISTINCT m.id, m.nombre 
+     FROM marcas m
+     INNER JOIN modelos mo ON mo.marca_id = m.id
+     WHERE mo.subcategoria_id = ? AND m.activo = true AND mo.activo = true
+     ORDER BY m.nombre ASC`,
+    [subcategoriaId]
+  );
+
+  return marcas as Marca[];
+};

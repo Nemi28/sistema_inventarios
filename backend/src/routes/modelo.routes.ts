@@ -26,6 +26,13 @@ router.get('/buscar', verificarToken, modeloController.buscar);
 // GET /api/modelos/subcategoria/:subcategoriaId - Obtener modelos por subcategoría (para selects)
 router.get('/subcategoria/:subcategoriaId', verificarToken, modeloController.obtenerPorSubcategoria);
 
+// GET /api/modelos/por-marca-subcategoria/:marcaId/:subcategoriaId - Para combos escalonados
+router.get(
+  '/por-marca-subcategoria/:marcaId/:subcategoriaId',
+  verificarToken,
+  modeloController.obtenerModelosPorMarcaYSubcategoria
+);
+
 // GET /api/modelos/:id - Obtener modelo por ID
 router.get('/:id', verificarToken, modeloController.obtenerPorId);
 

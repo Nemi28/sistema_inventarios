@@ -1,7 +1,14 @@
 export interface EquipoEntregado {
-  equipo: string;
-  marca: string;
-  modelo: string;
+  // Los IDs son opcionales porque vienen del frontend pero NO se usan en el PDF
+  categoria_id?: number;
+  subcategoria_id?: number;
+  marca_id?: number;
+  modelo_id?: number;
+  
+  // Solo estos campos se envían al PDF
+  equipo: string;           // Nombre de la subcategoría
+  marca: string;           // Nombre de la marca
+  modelo: string;          // Nombre del modelo
   serie: string;
   inventario: string;
   hostname?: string;
