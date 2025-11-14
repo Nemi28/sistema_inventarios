@@ -370,3 +370,33 @@ export const obtenerModelosPorSubcategoria = async (
 
   return modelos as Modelo[];
 };
+/**
+ * Obtener modelos por marca y subcategoría (para combos escalonados)
+ */
+export const obtenerModelosPorMarcaYSubcategoria = async (
+  marcaId: number,
+  subcategoriaId: number
+): Promise<Modelo[]> => {
+  const [modelos] = await pool.execute<RowDataPacket[]>(
+    `SELECT 
+      m.id,
+      m.nombre,
+      m.subcategoria_id,
+      m.marca_id,
+      m.especificaciones_tecnicas
+     FROM modelos m
+     WHERE m.marca_id = ? 
+       AND m.subcategoria_id = ? 
+       AND m.activo = true
+     ORDER BY m.nombre ASC`,
+    [marcaId, subcategoriaId]
+  );
+
+  // Parsear especificaciones_tecnicas
+  return modelos.map((modelo: any) => ({
+    ...modelo,
+    especificaciones_tecnicas: modelo.especificaciones_tecnicas 
+      ? JSON.parse(modelo.especificaciones_tecnicas) 
+      : null,
+  })) as Modelo[];
+};

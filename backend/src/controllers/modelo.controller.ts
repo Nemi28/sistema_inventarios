@@ -374,3 +374,31 @@ export const eliminar = async (req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * Obtener modelos por marca y subcategoría (para combos escalonados)
+ * GET /api/modelos/por-marca-subcategoria/:marcaId/:subcategoriaId
+ * Roles: todos
+ */
+export const obtenerModelosPorMarcaYSubcategoria = async (req: Request, res: Response) => {
+  try {
+    const { marcaId, subcategoriaId } = req.params;
+
+    const modelos = await ModeloModel.obtenerModelosPorMarcaYSubcategoria(
+      parseInt(marcaId),
+      parseInt(subcategoriaId)
+    );
+
+    res.status(200).json({
+      success: true,
+      data: modelos,
+    });
+  } catch (error: any) {
+    console.error('Error al obtener modelos por marca y subcategoría:', error);
+    res.status(500).json({
+      success: false,
+      mensaje: 'Error al obtener modelos',
+      error: error.message,
+    });
+  }
+};

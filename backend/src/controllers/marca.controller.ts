@@ -299,3 +299,27 @@ export const eliminar = async (req: Request, res: Response) => {
     });
   }
 };
+/**
+ * Obtener marcas que tienen modelos en una subcategoría específica
+ * GET /api/marcas/por-subcategoria/:subcategoriaId
+ * Roles: todos
+ */
+export const obtenerMarcasPorSubcategoria = async (req: Request, res: Response) => {
+  try {
+    const { subcategoriaId } = req.params;
+
+    const marcas = await MarcaModel.obtenerMarcasPorSubcategoria(parseInt(subcategoriaId));
+
+    res.status(200).json({
+      success: true,
+      data: marcas,
+    });
+  } catch (error: any) {
+    console.error('Error al obtener marcas por subcategoría:', error);
+    res.status(500).json({
+      success: false,
+      mensaje: 'Error al obtener marcas',
+      error: error.message,
+    });
+  }
+};

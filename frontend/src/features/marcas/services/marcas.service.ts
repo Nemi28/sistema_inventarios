@@ -82,3 +82,10 @@ export const obtenerMarcas = async (): Promise<Marca[]> => {
   });
   return data.data;
 };
+
+export const obtenerMarcasPorSubcategoria = async (subcategoriaId: number): Promise<Marca[]> => {
+  const { data } = await api.get<{ success: boolean; data: Marca[] }>(
+    `/api/marcas/por-subcategoria/${subcategoriaId}`
+  );
+  return data.data;
+};

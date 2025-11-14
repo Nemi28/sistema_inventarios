@@ -86,3 +86,13 @@ export const obtenerModelos = async (filtros?: { subcategoria_id?: number; marca
   });
   return data.data;
 };
+
+export const obtenerModelosPorMarcaYSubcategoria = async (
+  marcaId: number,
+  subcategoriaId: number
+): Promise<Modelo[]> => {
+  const { data } = await api.get<{ success: boolean; data: Modelo[] }>(
+    `/api/modelos/por-marca-subcategoria/${marcaId}/${subcategoriaId}`
+  );
+  return data.data;
+};
