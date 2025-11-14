@@ -19,6 +19,7 @@ import { GuiasPage } from './features/guias/components/GuiasPage';
 import { CategoriasPage } from './features/categorias/components/CategoriasPage';
 import { EquiposPage } from './features/equipos/components/EquiposPage';
 import { ActasPage } from './features/actas/components/ActasPage';
+import { CategoriaDetailView } from './features/categorias/components/CategoriaDetailView';
 import { OrdenesCompraPage } from './features/ordenes_compra/components/OrdenesCompraPage';
 
 
@@ -80,6 +81,7 @@ function App() {
             <Route path="/categorias" element={<CategoriasPage />} />
             <Route path="/equipos" element={<EquiposPage />} />
             <Route path="/ordenes-compra" element={<OrdenesCompraPage />} />
+            <Route path="/categorias/:id/equipos" element={<CategoriaDetailView />} />
             <Route path="/actas" element={<ActasPage />} />
           </Route>
 

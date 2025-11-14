@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SearchBar } from '@/components/common/SearchBar';
@@ -15,6 +16,8 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Categoria } from '../types';
 
 export const CategoriasPage = () => {
+  const navigate = useNavigate();
+  
   // Estado local
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
@@ -56,6 +59,10 @@ export const CategoriasPage = () => {
 
   const handleDelete = (categoria: Categoria) => {
     setDeletingItem(categoria);
+  };
+
+  const handleViewEquipos = (categoria: Categoria) => {
+    navigate(`/categorias/${categoria.id}/equipos`);
   };
 
   const confirmDelete = () => {
@@ -120,6 +127,7 @@ export const CategoriasPage = () => {
         onPageChange={setPage}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onViewEquipos={handleViewEquipos}
       />
 
       {/* Modal de Formulario */}

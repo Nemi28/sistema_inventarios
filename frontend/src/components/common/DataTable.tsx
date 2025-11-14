@@ -20,6 +20,7 @@ interface DataTableProps<TData> {
   onRowClick?: (row: TData) => void;
   onEdit?: (row: TData) => void;
   onDelete?: (row: TData) => void;
+  onViewEquipos?: (row: TData) => void; // ← NUEVA LÍNEA
 }
 
 export function DataTable<TData>({
@@ -29,6 +30,7 @@ export function DataTable<TData>({
   onRowClick,
   onEdit,
   onDelete,
+  onViewEquipos, // ← NUEVA LÍNEA
 }: DataTableProps<TData>) {
   const table = useReactTable({
     data,
@@ -37,6 +39,7 @@ export function DataTable<TData>({
     meta: {
       onEdit: onEdit,
       onDelete: onDelete,
+      onViewEquipos: onViewEquipos, // ← NUEVA LÍNEA
     },
   });
 

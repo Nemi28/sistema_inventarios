@@ -14,6 +14,7 @@ interface CategoriaTableProps {
   onPageChange: (page: number) => void;
   onEdit: (categoria: Categoria) => void;
   onDelete: (categoria: Categoria) => void;
+  onViewEquipos: (categoria: Categoria) => void;
 }
 
 export const CategoriaTable = ({
@@ -24,17 +25,8 @@ export const CategoriaTable = ({
   onPageChange,
   onEdit,
   onDelete,
+  onViewEquipos,
 }: CategoriaTableProps) => {
-  // Configurar metadatos para las columnas
-
- //onst columnsWithMeta = columns.map((col) => ({
-   //..col,
-   //eta: {
-     //nEdit,
-     //nDelete,
-   //,
- //));
-
   if (!isLoading && data.length === 0) {
     return (
       <EmptyState
@@ -48,12 +40,13 @@ export const CategoriaTable = ({
   return (
     <div className="space-y-4">
       <DataTable
-        data={data}
-        columns={columns}
-        isLoading={isLoading}
-        onEdit={onEdit}
-        onDelete={onDelete}
-      />
+  data={data}
+  columns={columns}
+  isLoading={isLoading}
+  onEdit={onEdit}
+  onDelete={onDelete}
+  onViewEquipos={onViewEquipos}
+/>
 
       {pagination && pagination.total_paginas > 1 && (
         <Pagination
