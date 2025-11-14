@@ -13,6 +13,9 @@ import dashboardRoutes from './routes/dashboard.routes';
 import passwordRoutes from './routes/password.routes';
 import ordenCompraRoutes from './routes/orden_compra.routes';
 import actaRoutes from './routes/acta.routes';
+import marcaRoutes from './routes/marca.routes';
+import subcategoriaRoutes from './routes/subcategoria.routes';
+import modeloRoutes from './routes/modelo.routes';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 
 // Configurar variables de entorno
@@ -43,6 +46,9 @@ app.get('/', (req, res) => {
       socios: '/api/socios',
       tiendas: '/api/tiendas',
       categorias: '/api/categorias',
+      marcas: '/api/marcas',
+      subcategorias: '/api/subcategorias',
+      modelos: '/api/modelos', 
       equipos: '/api/equipos',
       ordenes_compra: '/api/ordenes-compra',
       dashboard:'/api/dashboard',
@@ -79,6 +85,9 @@ app.use('/api/socios', socioRoutes);
 app.use('/api/tiendas', tiendaRoutes);
 app.use('/api/guias', guiaRoutes);
 app.use('/api/categorias', categoriaRoutes);
+app.use('/api/marcas', marcaRoutes); 
+app.use('/api/subcategorias', subcategoriaRoutes);
+app.use('/api/modelos', modeloRoutes);
 app.use('/api/equipos', equiposRoutes);
 app.use('/api/ordenes-compra', ordenCompraRoutes);
 app.use('/api/dashboard', dashboardRoutes);

@@ -1,5 +1,5 @@
 import { ColumnDef } from '@tanstack/react-table';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Categoria } from '../types';
@@ -49,6 +49,22 @@ export const columns: ColumnDef<Categoria>[] = [
 
       return (
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (meta?.onViewEquipos) {
+                meta.onViewEquipos(item);
+              }
+            }}
+            className="h-8 px-3 hover:bg-blue-50 hover:text-blue-600"
+            title="Ver Equipos"
+            type="button"
+          >
+            <Package className="h-4 w-4 mr-1" />
+            <span className="text-xs">Ver Equipos</span>
+          </Button>
           <Button
             size="sm"
             variant="ghost"
