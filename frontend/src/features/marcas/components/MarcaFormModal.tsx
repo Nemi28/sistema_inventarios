@@ -51,14 +51,20 @@ export const MarcaFormModal: React.FC<MarcaFormModalProps> = ({
       nombre: '',
       activo: true,
     },
+    mode: 'onChange',
   });
 
   useEffect(() => {
     if (marca) {
-      form.reset({
-        nombre: marca.nombre,
-        activo: marca.activo,
-      });
+      form.reset(
+        {
+          nombre: marca.nombre,
+          activo: Boolean(marca.activo),
+        },
+        {
+          keepDefaultValues: false,
+        }
+      );
     } else {
       form.reset({
         nombre: '',
@@ -68,7 +74,7 @@ export const MarcaFormModal: React.FC<MarcaFormModalProps> = ({
   }, [marca, form]);
 
   const onSubmit = (data: MarcaFormValues) => {
-    if (isEditing) {
+    if (isEditing && marca) {
       updateMutation.mutate(
         { id: marca.id, data },
         {
@@ -87,6 +93,8 @@ export const MarcaFormModal: React.FC<MarcaFormModalProps> = ({
       });
     }
   };
+
+  const isLoading = crearMutation.isPending || updateMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,19 +142,12 @@ export const MarcaFormModal: React.FC<MarcaFormModalProps> = ({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={crearMutation.isPending || updateMutation.isPending}
+                disabled={isLoading}
               >
                 Cancelar
               </Button>
-              <Button
-                type="submit"
-                disabled={crearMutation.isPending || updateMutation.isPending}
-              >
-                {crearMutation.isPending || updateMutation.isPending
-                  ? 'Guardando...'
-                  : isEditing
-                  ? 'Actualizar'
-                  : 'Crear'}
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
               </Button>
             </div>
           </form>
