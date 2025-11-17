@@ -59,8 +59,12 @@ export const SubcategoriaFormModal: React.FC<SubcategoriaFormModalProps> = ({
     if (subcategoria) {
       form.reset({
         nombre: subcategoria.nombre,
-        activo: subcategoria.activo,
-      });
+        activo: Boolean(subcategoria.activo),
+      },
+      {
+        keepDefaultValues: false, 
+      }
+    );
     } else {
       form.reset({
         nombre: '',

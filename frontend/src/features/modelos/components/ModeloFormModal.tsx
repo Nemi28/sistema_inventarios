@@ -86,8 +86,12 @@ export const ModeloFormModal: React.FC<ModeloFormModalProps> = ({
         especificaciones_tecnicas: modelo.especificaciones_tecnicas
           ? JSON.stringify(modelo.especificaciones_tecnicas, null, 2)
           : '',
-        activo: modelo.activo,
-      });
+        activo: Boolean(modelo.activo),
+      },
+      {
+        keepDefaultValues: false,  
+      }
+    );
     } else {
       form.reset({
         subcategoria_id: 0,
