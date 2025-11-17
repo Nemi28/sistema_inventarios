@@ -18,7 +18,7 @@ export interface EquipoEntregado {
 }
 
 export interface EquipoRecojo extends EquipoEntregado {
-  estado: 'OPERATIVO' | 'INOPERATIVO' | 'DAÑO FISICO';
+  estado: 'OPERATIVO' | 'INOPERATIVO' | 'DAÑO FISICO' | 'POR VALIDAR';
 }
 
 export interface GenerarActaRequest {

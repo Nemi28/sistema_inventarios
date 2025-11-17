@@ -1,10 +1,24 @@
-import { Package, Store, ShoppingCart, CheckCircle, XCircle } from 'lucide-react';
-import { useUltimosSKUs, useUltimasTiendas, useUltimasOrdenes } from '../hooks/useDashboardStats';
+import {
+  Package,
+  Store,
+  ShoppingCart,
+  CheckCircle,
+  XCircle,
+  Laptop,
+  Sparkles,
+} from 'lucide-react';
+import {
+  useUltimosSKUs,
+  useUltimasTiendas,
+  useUltimasOrdenes,
+  useUltimosModelos,
+} from '../hooks/useDashboardStats';
 
 export const RecentTables = () => {
   const { data: skusData, isLoading: skusLoading } = useUltimosSKUs();
   const { data: tiendasData, isLoading: tiendasLoading } = useUltimasTiendas();
   const { data: ordenesData, isLoading: ordenesLoading } = useUltimasOrdenes();
+  const { data: modelosData, isLoading: modelosLoading } = useUltimosModelos(5);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -15,10 +29,10 @@ export const RecentTables = () => {
     });
   };
 
-  if (skusLoading || tiendasLoading || ordenesLoading) {
+  if (skusLoading || tiendasLoading || ordenesLoading || modelosLoading) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {[...Array(3)].map((_, i) => (
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
           <div key={i} className="bg-white rounded-lg shadow p-6 animate-pulse">
             <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
             <div className="space-y-3">
@@ -35,8 +49,8 @@ export const RecentTables = () => {
   return (
     <div className="space-y-6">
       <h3 className="text-xl font-bold text-gray-900">Registros Recientes</h3>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         {/* Últimos SKUs */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b">
@@ -48,19 +62,31 @@ export const RecentTables = () => {
           <div className="p-4">
             <div className="space-y-3">
               {(skusData || []).map((sku, index) => (
-                <div key={index} className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                <div
+                  key={index}
+                  className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-900 text-sm">{sku.codigo_sku}</p>
-                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">{sku.descripcion_sku}</p>
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {sku.codigo_sku}
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                        {sku.descripcion_sku}
+                      </p>
                     </div>
                     {sku.activo ? (
-                      <CheckCircle className="text-green-500 flex-shrink-0" size={16} />
+                      <CheckCircle
+                        className="text-green-500 flex-shrink-0"
+                        size={16}
+                      />
                     ) : (
                       <XCircle className="text-red-500 flex-shrink-0" size={16} />
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">{formatDate(sku.fecha_creacion)}</p>
+                  <p className="text-xs text-gray-500">
+                    {formatDate(sku.fecha_creacion)}
+                  </p>
                 </div>
               ))}
             </div>
@@ -72,13 +98,18 @@ export const RecentTables = () => {
           <div className="p-6 border-b">
             <div className="flex items-center gap-2">
               <Store className="text-green-600" size={20} />
-              <h4 className="text-lg font-semibold text-gray-800">Últimas Tiendas</h4>
+              <h4 className="text-lg font-semibold text-gray-800">
+                Últimas Tiendas
+              </h4>
             </div>
           </div>
           <div className="p-4">
             <div className="space-y-3">
               {(tiendasData || []).map((tienda, index) => (
-                <div key={index} className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                <div
+                  key={index}
+                  className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -86,16 +117,26 @@ export const RecentTables = () => {
                           {tienda.pdv}
                         </span>
                         {tienda.activo ? (
-                          <CheckCircle className="text-green-500 flex-shrink-0" size={16} />
+                          <CheckCircle
+                            className="text-green-500 flex-shrink-0"
+                            size={16}
+                          />
                         ) : (
-                          <XCircle className="text-red-500 flex-shrink-0" size={16} />
+                          <XCircle
+                            className="text-red-500 flex-shrink-0"
+                            size={16}
+                          />
                         )}
                       </div>
-                      <p className="font-semibold text-gray-900 text-sm mt-1">{tienda.nombre_tienda}</p>
+                      <p className="font-semibold text-gray-900 text-sm mt-1">
+                        {tienda.nombre_tienda}
+                      </p>
                       <p className="text-xs text-gray-600 mt-1">{tienda.socio}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500">{formatDate(tienda.fecha_creacion)}</p>
+                  <p className="text-xs text-gray-500">
+                    {formatDate(tienda.fecha_creacion)}
+                  </p>
                 </div>
               ))}
             </div>
@@ -107,28 +148,92 @@ export const RecentTables = () => {
           <div className="p-6 border-b">
             <div className="flex items-center gap-2">
               <ShoppingCart className="text-orange-600" size={20} />
-              <h4 className="text-lg font-semibold text-gray-800">Últimas Órdenes</h4>
+              <h4 className="text-lg font-semibold text-gray-800">
+                Últimas Órdenes
+              </h4>
             </div>
           </div>
           <div className="p-4">
             <div className="space-y-3">
               {(ordenesData || []).map((orden, index) => (
-                <div key={index} className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                <div
+                  key={index}
+                  className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-900 text-sm">{orden.numero_orden}</p>
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {orden.numero_orden}
+                      </p>
                       {orden.detalle && (
-                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">{orden.detalle}</p>
+                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                          {orden.detalle}
+                        </p>
                       )}
                     </div>
                     {orden.activo ? (
-                      <CheckCircle className="text-green-500 flex-shrink-0" size={16} />
+                      <CheckCircle
+                        className="text-green-500 flex-shrink-0"
+                        size={16}
+                      />
                     ) : (
                       <XCircle className="text-red-500 flex-shrink-0" size={16} />
                     )}
                   </div>
                   <p className="text-xs text-gray-500">
                     Ingreso: {formatDate(orden.fecha_ingreso)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Últimos Modelos - NUEVO */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-6 border-b">
+            <div className="flex items-center gap-2">
+              <Laptop className="text-purple-600" size={20} />
+              <h4 className="text-lg font-semibold text-gray-800">
+                Últimos Modelos
+              </h4>
+            </div>
+          </div>
+          <div className="p-4">
+            <div className="space-y-3">
+              {(modelosData || []).map((modelo, index) => (
+                <div
+                  key={index}
+                  className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold text-gray-900 text-sm">
+                          {modelo.nombre}
+                        </p>
+                        {modelo.es_nuevo && (
+                          <Sparkles className="text-yellow-500" size={14} />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        {modelo.marca} • {modelo.categoria}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {modelo.subcategoria}
+                      </p>
+                    </div>
+                    {modelo.activo ? (
+                      <CheckCircle
+                        className="text-green-500 flex-shrink-0"
+                        size={16}
+                      />
+                    ) : (
+                      <XCircle className="text-red-500 flex-shrink-0" size={16} />
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {formatDate(modelo.fecha_creacion)}
                   </p>
                 </div>
               ))}

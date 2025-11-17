@@ -1,5 +1,5 @@
 /**
- * Tipos e Interfaces para Dashboard - Frontend
+ * Tipos e Interfaces para Dashboard Completo
  * Sistema de Gestión de Inventarios
  */
 
@@ -71,7 +71,7 @@ export interface GrowthRate {
 }
 
 // ============================================
-// DATOS PARA GRÁFICOS TEMPORALES
+// DATOS PARA GRÁFICOS TEMPORALES (YA EXISTENTES)
 // ============================================
 
 export interface ChartDataMensual {
@@ -80,15 +80,17 @@ export interface ChartDataMensual {
   cantidad: number;
 }
 
-// Alias para compatibilidad con código existente
-export type ChartData = ChartDataMensual;
-
+// SKUs por mes (ya existe)
 export type SkusPorMes = ChartDataMensual[];
+
+// Órdenes por mes (ya existe)
 export type OrdenesPorMes = ChartDataMensual[];
+
+// Modelos por mes (NUEVA)
 export type ModelosPorMes = ChartDataMensual[];
 
 // ============================================
-// TIENDAS POR SOCIO
+// TIENDAS POR SOCIO (YA EXISTE)
 // ============================================
 
 export interface TiendasPorSocio {
@@ -97,7 +99,7 @@ export interface TiendasPorSocio {
 }
 
 // ============================================
-// GRÁFICOS NUEVOS
+// GRÁFICOS NUEVOS - TOP CATEGORÍAS
 // ============================================
 
 export interface TopCategoria {
@@ -106,11 +108,19 @@ export interface TopCategoria {
   porcentaje: number;
 }
 
+// ============================================
+// GRÁFICOS NUEVOS - DISTRIBUCIÓN EQUIPOS
+// ============================================
+
 export interface DistribucionEquipo {
   categoria: string;
   cantidad: number;
   porcentaje: number;
 }
+
+// ============================================
+// GRÁFICOS NUEVOS - TOP MARCAS
+// ============================================
 
 export interface TopMarca {
   marca: string;
@@ -118,64 +128,77 @@ export interface TopMarca {
   categorias_cubiertas: number;
 }
 
+// ============================================
+// GRÁFICOS NUEVOS - MATRIZ COBERTURA
+// ============================================
+
 export interface MatrizCobertura {
   marca: string;
-  [categoria: string]: number | string;
-}
-
-export interface MatrizCoberturaResponse {
-  matriz: MatrizCobertura[];
-  categorias: string[];
+  [categoria: string]: number | string; // Permite columnas dinámicas
 }
 
 // ============================================
-// ACTIVIDAD RECIENTE
+// ACTIVIDAD RECIENTE - ÚLTIMOS SKUS (YA EXISTE - MEJORADO)
 // ============================================
 
 export interface UltimoSKU {
   codigo_sku: string;
   descripcion_sku: string;
   activo: boolean;
-  fecha_creacion: string;
+  fecha_creacion: Date;
 }
 
+// Versión mejorada con días y categoría
 export interface UltimoSKUEnhanced extends UltimoSKU {
   categoria?: string;
   dias_desde_creacion: number;
 }
+
+// ============================================
+// ACTIVIDAD RECIENTE - ÚLTIMAS TIENDAS (YA EXISTE)
+// ============================================
 
 export interface UltimaTienda {
   pdv: string;
   nombre_tienda: string;
   socio: string;
   activo: boolean;
-  fecha_creacion: string;
+  fecha_creacion: Date;
 }
+
+// ============================================
+// ACTIVIDAD RECIENTE - ÚLTIMAS ÓRDENES (YA EXISTE - MEJORADO)
+// ============================================
 
 export interface UltimaOrden {
   numero_orden: string;
   detalle: string;
-  fecha_ingreso: string;
+  fecha_ingreso: Date;
   activo: boolean;
-  fecha_creacion: string;
+  fecha_creacion: Date;
 }
 
+// Versión mejorada con días desde ingreso
 export interface UltimaOrdenEnhanced extends UltimaOrden {
   dias_desde_ingreso: number;
 }
+
+// ============================================
+// ACTIVIDAD RECIENTE - ÚLTIMOS MODELOS (NUEVA)
+// ============================================
 
 export interface UltimoModelo {
   nombre: string;
   marca: string;
   categoria: string;
   subcategoria: string;
-  fecha_creacion: string;
+  fecha_creacion: Date;
   activo: boolean;
-  es_nuevo: boolean;
+  es_nuevo: boolean; // true si tiene menos de 7 días
 }
 
 // ============================================
-// ALERTAS E INDICADORES
+// ALERTAS E INDICADORES (NUEVAS)
 // ============================================
 
 export interface Alertas {
@@ -185,9 +208,9 @@ export interface Alertas {
 }
 
 export interface Indicadores {
-  tasaCompletitudCatalogo: number;
-  concentracionTopMarcas: number;
-  diversidadCatalogo: number;
+  tasaCompletitudCatalogo: number;    // % de categorías con modelos
+  concentracionTopMarcas: number;     // % de modelos en top 3 marcas
+  diversidadCatalogo: number;         // Número de marcas diferentes
 }
 
 export interface AlertasIndicadores {
@@ -200,7 +223,7 @@ export interface AlertasIndicadores {
 // ============================================
 
 export interface FiltrosDashboard {
-  periodo?: 3 | 6 | 12;
+  periodo?: 3 | 6 | 12; // meses
   categoria_id?: number;
   limit?: number;
 }
