@@ -40,6 +40,7 @@ export const AdditionalCharts = () => {
   const { data: distribucionData, isLoading: distribucionLoading } =
     useDistribucionEquipos();
 
+
   if (categoriasLoading || marcasLoading || distribucionLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -79,16 +80,23 @@ export const AdditionalCharts = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <h4 className="text-lg font-semibold text-gray-800 mb-4">
             Top Categorías por Modelos
+            <span className="text-sm text-gray-500 ml-2">
+      (Mostrando: {topCategoriasData?.length || 0} de {topLimit})
+    </span>
           </h4>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer 
+          width="100%" 
+          height={Math.max(300, (topCategoriasData?.length || 0) * 40)}
+          key={`categorias-${topLimit}`}
+          >
             <BarChart
               data={topCategoriasData || []}
               layout="vertical"
-              margin={{ left: 20 }}
+              margin={{ left: 20, right: 20, top: 10, bottom: 10 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis type="number" />
-              <YAxis dataKey="categoria" type="category" width={100} />
+              <YAxis dataKey="categoria" type="category" width={120} tick={{ fontSize: 12 }} />
               <Tooltip
                 formatter={(value: number, name: string, props: any) => [
                   `${value} modelos (${props.payload.porcentaje}%)`,
@@ -120,8 +128,10 @@ export const AdditionalCharts = () => {
                 nameKey="categoria"
                 cx="50%"
                 cy="50%"
-                outerRadius={80}
-                label={(entry: any) => `${entry.categoria} (${entry.porcentaje}%)`}
+                outerRadius={100}
+                innerRadius={60}
+                paddingAngle={2}
+                label={false}
                 >
               
                 {(distribucionData || []).map((entry, index) => (
@@ -139,6 +149,22 @@ export const AdditionalCharts = () => {
               />
             </PieChart>
           </ResponsiveContainer>
+          {/* Leyenda manual para evitar superposición */}
+                <div className="mt-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    {(distribucionData || []).map((item, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm">
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        />
+                        <span className="text-gray-700 truncate">
+                          {item.categoria}: <strong>{item.porcentaje}%</strong>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
         </div>
       </div>
 
@@ -146,8 +172,11 @@ export const AdditionalCharts = () => {
       <div className="bg-white rounded-lg shadow p-6">
         <h4 className="text-lg font-semibold text-gray-800 mb-4">
           Top Marcas del Catálogo
+          <span className="text-sm text-gray-500 ml-2">
+      (Mostrando: {topMarcasData?.length || 0} de {topLimit})
+    </span>
         </h4>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={300} key={`marcas-${topLimit}`}>
           <BarChart data={topMarcasData || []}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="marca" />
