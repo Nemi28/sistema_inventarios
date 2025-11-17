@@ -67,7 +67,7 @@ const actaSchema = z.object({
         procesador: z.string().optional(),
         disco: z.string().optional(),
         ram: z.string().optional(),
-        estado: z.enum(['OPERATIVO', 'INOPERATIVO', 'DAÑO FISICO']),
+        estado: z.enum(['OPERATIVO', 'INOPERATIVO', 'DAÑO FISICO', 'POR VALIDAR']),
       })
     )
     .optional(),

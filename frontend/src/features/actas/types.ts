@@ -18,7 +18,7 @@ export interface EquipoEntregado {
 }
 
 export interface EquipoRecojo extends EquipoEntregado {
-  estado: 'OPERATIVO' | 'INOPERATIVO' | 'DAÑO FISICO';
+  estado: 'OPERATIVO' | 'INOPERATIVO' | 'DAÑO FISICO' | 'POR VALIDAR';
 }
 
 export interface GenerarActaFormData {
@@ -71,4 +71,5 @@ export const ESTADO_EQUIPO_OPTIONS = [
   { value: 'OPERATIVO', label: 'Operativo' },
   { value: 'INOPERATIVO', label: 'Inoperativo' },
   { value: 'DAÑO FISICO', label: 'Daño Físico' },
+  { value: 'POR VALIDAR', label: 'Por Validar' },
 ] as const;
