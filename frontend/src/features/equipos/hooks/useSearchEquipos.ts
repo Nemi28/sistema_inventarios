@@ -3,14 +3,13 @@ import { buscarEquipos } from '../services/equipos.service';
 
 export const useSearchEquipos = (
   termino: string,
-  page = 1,
-  limit = 20,
-  enabled = true
+  page: number = 1,
+  limit: number = 20,
+  enabled: boolean = true
 ) => {
   return useQuery({
     queryKey: ['equipos', 'buscar', termino, page, limit],
     queryFn: () => buscarEquipos(termino, page, limit),
     enabled: enabled && termino.length > 0,
-    staleTime: 2 * 60 * 1000, // 2 minutos
   });
 };

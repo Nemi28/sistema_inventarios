@@ -74,3 +74,10 @@ export const reactivarOrdenCompra = async (id: number): Promise<OrdenCompra> => 
   );
   return data.data;
 };
+
+export const obtenerOrdenesCompra = async (): Promise<OrdenCompra[]> => {
+  const { data } = await api.get<PaginatedResponse<OrdenCompra>>('/api/ordenes-compra', {
+    params: { limit: 1000, activo: true }
+  });
+  return data.data;
+};

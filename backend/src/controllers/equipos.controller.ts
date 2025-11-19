@@ -8,13 +8,13 @@ import { validationResult } from 'express-validator';
 import * as EquipoModel from '../models/equipos.model';
 
 /**
- * Crear nuevo Equipo (individual)
+ * Crear nuevo Equipo
  * POST /api/equipos
  * Roles: gestor, administrador
  */
-export const crearEquipo = async (req: Request, res: Response) => {
+export const crear = async (req: Request, res: Response) => {
   try {
-    // Validar errores de express-validator
+    // Validar datos de entrada
     const errores = validationResult(req);
     if (!errores.isEmpty()) {
       return res.status(400).json({
@@ -24,57 +24,13 @@ export const crearEquipo = async (req: Request, res: Response) => {
       });
     }
 
-    const {
-      orden_compra_id,
-      categoria_id,
-      nombre,
-      marca,
-      modelo,
-      numero_serie,
-      inv_entel,
-      estado,
-      observacion,
-      activo,
-      detalle,
-    } = req.body;
-
-    // Validar que la categoría exista
-    const categoriaExiste = await EquipoModel.existeCategoriaPorId(categoria_id);
-    if (!categoriaExiste) {
-      return res.status(404).json({
-        success: false,
-        mensaje: 'La categoría especificada no existe',
-      });
-    }
-
-    // Validar que la orden de compra exista (si se proporciona)
-    if (orden_compra_id) {
-      const ordenExiste = await EquipoModel.existeOrdenCompraPorId(orden_compra_id);
-      if (!ordenExiste) {
-        return res.status(404).json({
-          success: false,
-          mensaje: 'La orden de compra especificada no existe',
-        });
-      }
-    }
+    const equipoData = req.body;
 
     // Crear equipo
-    const equipoId = await EquipoModel.crearEquipo({
-      orden_compra_id: orden_compra_id || null,
-      categoria_id,
-      nombre,
-      marca,
-      modelo,
-      numero_serie: numero_serie || null,
-      inv_entel: inv_entel || null,
-      estado,
-      observacion: observacion || null,
-      activo: activo ?? true,
-      detalle: detalle || null,
-    });
+    const nuevoId = await EquipoModel.crearEquipo(equipoData);
 
-    // Obtener equipo creado con relaciones
-    const equipoCreado = await EquipoModel.obtenerEquipoPorId(equipoId);
+    // Obtener equipo creado
+    const equipoCreado = await EquipoModel.obtenerEquipoPorId(nuevoId);
 
     res.status(201).json({
       success: true,
@@ -92,120 +48,23 @@ export const crearEquipo = async (req: Request, res: Response) => {
 };
 
 /**
- * Crear múltiples Equipos (registro masivo)
- * POST /api/equipos/multiple
- * Roles: gestor, administrador
- */
-export const crearEquiposMultiple = async (req: Request, res: Response) => {
-  try {
-    // Validar errores de express-validator
-    const errores = validationResult(req);
-    if (!errores.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        mensaje: 'Errores de validación',
-        errores: errores.array(),
-      });
-    }
-
-    const { equipos } = req.body;
-
-    // Validar que no exceda el límite
-    if (!equipos || equipos.length === 0) {
-      return res.status(400).json({
-        success: false,
-        mensaje: 'Debe proporcionar al menos un equipo',
-      });
-    }
-
-    if (equipos.length > 50) {
-      return res.status(400).json({
-        success: false,
-        mensaje: 'No se pueden crear más de 50 equipos a la vez',
-      });
-    }
-
-    // Validar que todas las categorías existan
-    const categoriasIds = [...new Set(equipos.map((e: any) => e.categoria_id))] as number[];
-    for (const categoriaId of categoriasIds) {
-      const existe = await EquipoModel.existeCategoriaPorId(categoriaId);
-      if (!existe) {
-        return res.status(404).json({
-          success: false,
-          mensaje: `La categoría con ID ${categoriaId} no existe`,
-        });
-      }
-    }
-
-    // Validar que todas las órdenes de compra existan (si se proporcionan)
-    const ordenesIds = [
-      ...new Set(
-        equipos
-          .filter((e: any) => e.orden_compra_id)
-          .map((e: any) => e.orden_compra_id)
-      ),
-    ] as number[];
-
-    for (const ordenId of ordenesIds) {
-      const existe = await EquipoModel.existeOrdenCompraPorId(ordenId);
-      if (!existe) {
-        return res.status(404).json({
-          success: false,
-          mensaje: `La orden de compra con ID ${ordenId} no existe`,
-        });
-      }
-    }
-
-    // Preparar equipos para inserción
-    const equiposParaCrear = equipos.map((equipo: any) => ({
-      orden_compra_id: equipo.orden_compra_id || null,
-      categoria_id: equipo.categoria_id,
-      nombre: equipo.nombre,
-      marca: equipo.marca,
-      modelo: equipo.modelo,
-      numero_serie: equipo.numero_serie || null,
-      inv_entel: equipo.inv_entel || null,
-      estado: equipo.estado,
-      observacion: equipo.observacion || null,
-      activo: equipo.activo ?? true,
-      detalle: equipo.detalle || null,
-    }));
-
-    // Crear equipos en transacción
-    const equiposCreados = await EquipoModel.crearEquiposMultiple(equiposParaCrear);
-
-    res.status(201).json({
-      success: true,
-      mensaje: `${equiposCreados.length} equipos creados exitosamente`,
-      data: {
-        cantidad: equiposCreados.length,
-        ids: equiposCreados,
-      },
-    });
-  } catch (error: any) {
-    console.error('Error al crear equipos múltiples:', error);
-    res.status(500).json({
-      success: false,
-      mensaje: 'Error al crear los equipos. Se revirtieron todos los cambios.',
-      error: error.message,
-    });
-  }
-};
-
-/**
- * Listar Equipos con paginación y filtros
+ * Listar equipos con paginación y filtros
  * GET /api/equipos
  * Roles: todos
  */
-export const listarEquipos = async (req: Request, res: Response) => {
+export const listar = async (req: Request, res: Response) => {
   try {
     const {
       page,
       limit,
       activo,
-      categoria_id,
-      orden_compra_id,
-      estado,
+      modelo_id,
+      estado_actual,
+      ubicacion_actual,
+      tienda_id,
+      tipo_propiedad,
+      garantia,
+      es_accesorio,
       ordenar_por,
       orden,
     } = req.query;
@@ -214,9 +73,13 @@ export const listarEquipos = async (req: Request, res: Response) => {
       page: page ? parseInt(page as string) : undefined,
       limit: limit ? parseInt(limit as string) : undefined,
       activo: activo === 'true' ? true : activo === 'false' ? false : undefined,
-      categoria_id: categoria_id ? parseInt(categoria_id as string) : undefined,
-      orden_compra_id: orden_compra_id ? parseInt(orden_compra_id as string) : undefined,
-      estado: estado as string,
+      modelo_id: modelo_id ? parseInt(modelo_id as string) : undefined,
+      estado_actual: estado_actual as string,
+      ubicacion_actual: ubicacion_actual as string,
+      tienda_id: tienda_id ? parseInt(tienda_id as string) : undefined,
+      tipo_propiedad: tipo_propiedad as string,
+      garantia: garantia === 'true' ? true : garantia === 'false' ? false : undefined,
+      es_accesorio: es_accesorio === 'true' ? true : es_accesorio === 'false' ? false : undefined,
       ordenar_por: ordenar_por as string,
       orden: orden as string,
     };
@@ -239,11 +102,11 @@ export const listarEquipos = async (req: Request, res: Response) => {
 };
 
 /**
- * Buscar Equipos por término
+ * Buscar equipos por término
  * GET /api/equipos/buscar?q=termino
  * Roles: todos
  */
-export const buscarEquipos = async (req: Request, res: Response) => {
+export const buscar = async (req: Request, res: Response) => {
   try {
     const { q, page, limit } = req.query;
 
@@ -277,11 +140,11 @@ export const buscarEquipos = async (req: Request, res: Response) => {
 };
 
 /**
- * Obtener Equipo por ID
+ * Obtener equipo por ID
  * GET /api/equipos/:id
  * Roles: todos
  */
-export const obtenerEquipoPorId = async (req: Request, res: Response) => {
+export const obtenerPorId = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -309,13 +172,13 @@ export const obtenerEquipoPorId = async (req: Request, res: Response) => {
 };
 
 /**
- * Actualizar Equipo
+ * Actualizar equipo
  * PUT /api/equipos/:id
  * Roles: gestor, administrador
  */
-export const actualizarEquipo = async (req: Request, res: Response) => {
+export const actualizar = async (req: Request, res: Response) => {
   try {
-    // Validar errores de express-validator
+    // Validar datos
     const errores = validationResult(req);
     if (!errores.isEmpty()) {
       return res.status(400).json({
@@ -326,10 +189,10 @@ export const actualizarEquipo = async (req: Request, res: Response) => {
     }
 
     const { id } = req.params;
-    const equipoId = parseInt(id);
+    const datos = req.body;
 
-    // Verificar que el equipo exista
-    const equipoExistente = await EquipoModel.obtenerEquipoPorId(equipoId);
+    // Verificar si existe
+    const equipoExistente = await EquipoModel.obtenerEquipoPorId(parseInt(id));
     if (!equipoExistente) {
       return res.status(404).json({
         success: false,
@@ -337,32 +200,19 @@ export const actualizarEquipo = async (req: Request, res: Response) => {
       });
     }
 
-    const datos = req.body;
-
-    // Validar que la categoría exista (si se proporciona)
-    if (datos.categoria_id) {
-      const categoriaExiste = await EquipoModel.existeCategoriaPorId(datos.categoria_id);
-      if (!categoriaExiste) {
-        return res.status(404).json({
+    // Validar inv_entel único (si se está actualizando)
+    if (datos.inv_entel && datos.inv_entel !== equipoExistente.inv_entel) {
+      const equipoConMismoInv = await EquipoModel.obtenerEquipoPorInvEntel(datos.inv_entel);
+      if (equipoConMismoInv && equipoConMismoInv.id !== parseInt(id)) {
+        return res.status(400).json({
           success: false,
-          mensaje: 'La categoría especificada no existe',
+          mensaje: 'Ya existe un equipo con ese código de inventario Entel',
         });
       }
     }
 
-    // Validar que la orden de compra exista (si se proporciona)
-    if (datos.orden_compra_id) {
-      const ordenExiste = await EquipoModel.existeOrdenCompraPorId(datos.orden_compra_id);
-      if (!ordenExiste) {
-        return res.status(404).json({
-          success: false,
-          mensaje: 'La orden de compra especificada no existe',
-        });
-      }
-    }
-
-    // Actualizar equipo
-    const actualizado = await EquipoModel.actualizarEquipo(equipoId, datos);
+    // Actualizar
+    const actualizado = await EquipoModel.actualizarEquipo(parseInt(id), datos);
 
     if (!actualizado) {
       return res.status(400).json({
@@ -372,7 +222,7 @@ export const actualizarEquipo = async (req: Request, res: Response) => {
     }
 
     // Obtener equipo actualizado
-    const equipoActualizado = await EquipoModel.obtenerEquipoPorId(equipoId);
+    const equipoActualizado = await EquipoModel.obtenerEquipoPorId(parseInt(id));
 
     res.status(200).json({
       success: true,
@@ -390,17 +240,16 @@ export const actualizarEquipo = async (req: Request, res: Response) => {
 };
 
 /**
- * Eliminar Equipo (soft delete)
+ * Eliminar equipo (soft delete)
  * DELETE /api/equipos/:id
  * Roles: solo administrador
  */
-export const eliminarEquipo = async (req: Request, res: Response) => {
+export const eliminar = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const equipoId = parseInt(id);
 
-    // Verificar que el equipo exista
-    const equipoExistente = await EquipoModel.obtenerEquipoPorId(equipoId);
+    // Verificar si existe
+    const equipoExistente = await EquipoModel.obtenerEquipoPorId(parseInt(id));
     if (!equipoExistente) {
       return res.status(404).json({
         success: false,
@@ -409,7 +258,7 @@ export const eliminarEquipo = async (req: Request, res: Response) => {
     }
 
     // Soft delete
-    const eliminado = await EquipoModel.eliminarEquipo(equipoId);
+    const eliminado = await EquipoModel.eliminarEquipo(parseInt(id));
 
     if (!eliminado) {
       return res.status(400).json({

@@ -1,3 +1,8 @@
+/**
+ * Validadores para Equipos
+ * Sistema de Gestión de Inventarios
+ */
+
 import { body, ValidationChain } from 'express-validator';
 
 // ============================================
@@ -5,253 +10,245 @@ import { body, ValidationChain } from 'express-validator';
 // ============================================
 
 /**
- * Validación de detalle JSON
- * Verifica que sea un objeto JSON válido
- */
-const validarDetalleJSON = body('detalle')
-  .optional()
-  .custom((value) => {
-    if (value === null || value === undefined) return true;
-    
-    // Si es string, intentar parsearlo
-    if (typeof value === 'string') {
-      try {
-        JSON.parse(value);
-        return true;
-      } catch {
-        throw new Error('El detalle debe ser un JSON válido');
-      }
-    }
-    
-    // Si es objeto, validar que sea un objeto válido
-    if (typeof value === 'object') {
-      return true;
-    }
-    
-    throw new Error('El detalle debe ser un objeto JSON');
-  });
-
-/**
- * Validaciones para crear un EQUIPO (registro individual)
+ * Validaciones para crear EQUIPO
  */
 export const validarCrearEquipo: ValidationChain[] = [
-  body('orden_compra_id')
-    .optional({ nullable: true })
-    .isInt({ min: 1 })
-    .withMessage('El ID de orden de compra debe ser un número entero positivo'),
-
-  body('categoria_id')
-    .notEmpty()
-    .withMessage('El ID de categoría es obligatorio')
-    .isInt({ min: 1 })
-    .withMessage('El ID de categoría debe ser un número entero positivo'),
-
-  body('nombre')
-    .notEmpty()
-    .withMessage('El nombre del equipo es obligatorio')
-    .isLength({ min: 2, max: 100 })
-    .withMessage('El nombre debe tener entre 2 y 100 caracteres')
-    .trim(),
-
-  body('marca')
-    .notEmpty()
-    .withMessage('La marca es obligatoria')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('La marca debe tener entre 2 y 50 caracteres')
-    .trim(),
-
-  body('modelo')
-    .notEmpty()
-    .withMessage('El modelo es obligatorio')
-    .isLength({ min: 1, max: 50 })
-    .withMessage('El modelo debe tener entre 1 y 50 caracteres')
-    .trim(),
-
   body('numero_serie')
-    .optional({ nullable: true })
-    .isLength({ max: 100 })
-    .withMessage('El número de serie no puede exceder 100 caracteres')
+    .optional()
+    .isLength({ max: 30 })
+    .withMessage('El número de serie no puede exceder 30 caracteres')
     .trim(),
 
   body('inv_entel')
-    .optional({ nullable: true })
-    .isLength({ max: 50 })
-    .withMessage('El código inv_entel no puede exceder 50 caracteres')
-    .trim(),
-
-  body('estado')
-    .notEmpty()
-    .withMessage('El estado es obligatorio')
-    .isIn(['nuevo', 'operativo', 'inoperativo', 'perdido', 'baja', 'por validar', 'otro'])
-    .withMessage('El estado debe ser: nuevo, operativo, inoperativo, perdido, baja, por validar u otro'),
-
-  body('observacion')
-    .optional({ nullable: true })
-    .isLength({ max: 100 })
-    .withMessage('La observación no puede exceder 100 caracteres')
-    .trim(),
-
-  body('activo')
     .optional()
-    .isBoolean()
-    .withMessage('El campo activo debe ser true o false'),
+    .isLength({ max: 50 })
+    .withMessage('El código de inventario Entel no puede exceder 50 caracteres')
+    .trim(),
 
-  validarDetalleJSON,
-];
+  body('modelo_id')
+    .notEmpty()
+    .withMessage('El ID del modelo es obligatorio')
+    .isInt({ min: 1 })
+    .withMessage('El ID del modelo debe ser un número entero positivo'),
 
-/**
- * Validaciones para actualizar un EQUIPO
- */
-export const validarActualizarEquipo: ValidationChain[] = [
   body('orden_compra_id')
-    .optional({ nullable: true })
+    .optional()
     .isInt({ min: 1 })
     .withMessage('El ID de orden de compra debe ser un número entero positivo'),
 
-  body('categoria_id')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('El ID de categoría debe ser un número entero positivo'),
-
-  body('nombre')
-    .optional()
-    .isLength({ min: 2, max: 100 })
-    .withMessage('El nombre debe tener entre 2 y 100 caracteres')
-    .trim(),
-
-  body('marca')
-    .optional()
-    .isLength({ min: 2, max: 50 })
-    .withMessage('La marca debe tener entre 2 y 50 caracteres')
-    .trim(),
-
-  body('modelo')
-    .optional()
-    .isLength({ min: 1, max: 50 })
-    .withMessage('El modelo debe tener entre 1 y 50 caracteres')
-    .trim(),
-
-  body('numero_serie')
-    .optional({ nullable: true })
-    .isLength({ max: 100 })
-    .withMessage('El número de serie no puede exceder 100 caracteres')
-    .trim(),
-
-  body('inv_entel')
-    .optional({ nullable: true })
-    .isLength({ max: 50 })
-    .withMessage('El código inv_entel no puede exceder 50 caracteres')
-    .trim(),
-
-  body('estado')
-    .optional()
-    .isIn(['nuevo', 'operativo', 'inoperativo', 'perdido', 'baja', 'por validar', 'otro'])
-    .withMessage('El estado debe ser: nuevo, operativo, inoperativo, perdido, baja, por validar u otro'),
-
-  body('observacion')
-    .optional({ nullable: true })
-    .isLength({ max: 100 })
-    .withMessage('La observación no puede exceder 100 caracteres')
-    .trim(),
-
-  body('activo')
-    .optional()
-    .isBoolean()
-    .withMessage('El campo activo debe ser true o false'),
-
-  validarDetalleJSON,
-];
-
-/**
- * Validaciones para REGISTRO MÚLTIPLE de equipos
- * Valida un array de equipos (máximo 50)
- */
-export const validarCrearEquiposMultiple: ValidationChain[] = [
-  body('equipos')
+  body('tipo_propiedad')
     .notEmpty()
-    .withMessage('El array de equipos es obligatorio')
-    .isArray({ min: 1, max: 50 })
-    .withMessage('Debe enviar entre 1 y 50 equipos'),
+    .withMessage('El tipo de propiedad es obligatorio')
+    .isIn(['PROPIO', 'ALQUILADO'])
+    .withMessage('El tipo de propiedad debe ser "PROPIO" o "ALQUILADO"'),
 
-  body('equipos.*.orden_compra_id')
-    .optional({ nullable: true })
-    .isInt({ min: 1 })
-    .withMessage('El ID de orden de compra debe ser un número entero positivo'),
-
-  body('equipos.*.categoria_id')
-    .notEmpty()
-    .withMessage('El ID de categoría es obligatorio en cada equipo')
-    .isInt({ min: 1 })
-    .withMessage('El ID de categoría debe ser un número entero positivo'),
-
-  body('equipos.*.nombre')
-    .notEmpty()
-    .withMessage('El nombre del equipo es obligatorio')
-    .isLength({ min: 2, max: 100 })
-    .withMessage('El nombre debe tener entre 2 y 100 caracteres')
-    .trim(),
-
-  body('equipos.*.marca')
-    .notEmpty()
-    .withMessage('La marca es obligatoria')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('La marca debe tener entre 2 y 50 caracteres')
-    .trim(),
-
-  body('equipos.*.modelo')
-    .notEmpty()
-    .withMessage('El modelo es obligatorio')
-    .isLength({ min: 1, max: 50 })
-    .withMessage('El modelo debe tener entre 1 y 50 caracteres')
-    .trim(),
-
-  body('equipos.*.numero_serie')
-    .optional({ nullable: true })
-    .isLength({ max: 100 })
-    .withMessage('El número de serie no puede exceder 100 caracteres')
-    .trim(),
-
-  body('equipos.*.inv_entel')
-    .optional({ nullable: true })
-    .isLength({ max: 50 })
-    .withMessage('El código inv_entel no puede exceder 50 caracteres')
-    .trim(),
-
-  body('equipos.*.estado')
-    .notEmpty()
-    .withMessage('El estado es obligatorio')
-    .isIn(['nuevo', 'operativo', 'inoperativo', 'perdido', 'baja', 'por validar', 'otro'])
-    .withMessage('El estado debe ser: nuevo, operativo, inoperativo, perdido, baja, por validar u otro'),
-
-  body('equipos.*.observacion')
-    .optional({ nullable: true })
-    .isLength({ max: 100 })
-    .withMessage('La observación no puede exceder 100 caracteres')
-    .trim(),
-
-  body('equipos.*.activo')
-    .optional()
-    .isBoolean()
-    .withMessage('El campo activo debe ser true o false'),
-
-  body('equipos.*.detalle')
-    .optional()
+  body('fecha_compra')
+    .optional({ values: 'null' })
     .custom((value) => {
-      if (value === null || value === undefined) return true;
-      
-      if (typeof value === 'string') {
-        try {
-          JSON.parse(value);
-          return true;
-        } catch {
-          throw new Error('El detalle debe ser un JSON válido');
-        }
-      }
-      
-      if (typeof value === 'object') {
+      if (!value || value === null || value === undefined) {
         return true;
       }
-      
-      throw new Error('El detalle debe ser un objeto JSON');
+      const date = new Date(value);
+      if (isNaN(date.getTime())) {
+        throw new Error('La fecha de compra debe ser una fecha válida');
+      }
+      return true;
     }),
+
+  body('garantia')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo garantía debe ser true o false'),
+
+  body('sistema_operativo')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('El sistema operativo no puede exceder 50 caracteres')
+    .trim(),
+
+  body('estado_actual')
+    .notEmpty()
+    .withMessage('El estado actual es obligatorio')
+    .isIn(['OPERATIVO', 'POR_VALIDAR', 'EN_GARANTIA', 'BAJA', 'INOPERATIVO'])
+    .withMessage('El estado debe ser: OPERATIVO, POR_VALIDAR, EN_GARANTIA, BAJA o INOPERATIVO'),
+
+  body('ubicacion_actual')
+    .notEmpty()
+    .withMessage('La ubicación actual es obligatoria')
+    .isIn(['ALMACEN', 'TIENDA', 'PERSONA', 'EN_TRANSITO'])
+    .withMessage('La ubicación debe ser: ALMACEN, TIENDA, PERSONA o EN_TRANSITO'),
+
+  body('tienda_id')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('El ID de tienda debe ser un número entero positivo'),
+
+  body('hostname')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('El hostname no puede exceder 100 caracteres')
+    .trim(),
+
+  body('posicion_tienda')
+    .optional()
+    .isLength({ max: 20 })
+    .withMessage('La posición en tienda no puede exceder 20 caracteres')
+    .trim(),
+
+  body('area_tienda')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('El área de tienda no puede exceder 50 caracteres')
+    .trim(),
+
+  body('responsable_socio')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('El responsable del socio no puede exceder 100 caracteres')
+    .trim(),
+
+  body('responsable_entel')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('El responsable Entel no puede exceder 100 caracteres')
+    .trim(),
+
+  body('es_accesorio')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo es_accesorio debe ser true o false'),
+
+  body('equipo_principal_id')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('El ID del equipo principal debe ser un número entero positivo'),
+
+  body('observaciones')
+    .optional()
+    .trim(),
+
+  body('activo')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo activo debe ser true o false'),
+];
+
+/**
+ * Validaciones para actualizar EQUIPO
+ */
+export const validarActualizarEquipo: ValidationChain[] = [
+  body('numero_serie')
+    .optional()
+    .isLength({ max: 30 })
+    .withMessage('El número de serie no puede exceder 30 caracteres')
+    .trim(),
+
+  body('inv_entel')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('El código de inventario Entel no puede exceder 50 caracteres')
+    .trim(),
+
+  body('modelo_id')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('El ID del modelo debe ser un número entero positivo'),
+
+  body('orden_compra_id')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('El ID de orden de compra debe ser un número entero positivo'),
+
+  body('tipo_propiedad')
+    .optional()
+    .isIn(['PROPIO', 'ALQUILADO'])
+    .withMessage('El tipo de propiedad debe ser "PROPIO" o "ALQUILADO"'),
+
+  body('fecha_compra')
+    .optional({ values: 'null' })
+    .custom((value) => {
+      if (!value || value === null || value === undefined) {
+        return true;
+      }
+      const date = new Date(value);
+      if (isNaN(date.getTime())) {
+        throw new Error('La fecha de compra debe ser una fecha válida');
+      }
+      return true;
+    }),
+
+  body('garantia')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo garantía debe ser true o false'),
+
+  body('sistema_operativo')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('El sistema operativo no puede exceder 50 caracteres')
+    .trim(),
+
+  body('estado_actual')
+    .optional()
+    .isIn(['OPERATIVO', 'POR_VALIDAR', 'EN_GARANTIA', 'BAJA', 'INOPERATIVO'])
+    .withMessage('El estado debe ser: OPERATIVO, POR_VALIDAR, EN_GARANTIA, BAJA o INOPERATIVO'),
+
+  body('ubicacion_actual')
+    .optional()
+    .isIn(['ALMACEN', 'TIENDA', 'PERSONA', 'EN_TRANSITO'])
+    .withMessage('La ubicación debe ser: ALMACEN, TIENDA, PERSONA o EN_TRANSITO'),
+
+  body('tienda_id')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('El ID de tienda debe ser un número entero positivo'),
+
+  body('hostname')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('El hostname no puede exceder 100 caracteres')
+    .trim(),
+
+  body('posicion_tienda')
+    .optional()
+    .isLength({ max: 20 })
+    .withMessage('La posición en tienda no puede exceder 20 caracteres')
+    .trim(),
+
+  body('area_tienda')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('El área de tienda no puede exceder 50 caracteres')
+    .trim(),
+
+  body('responsable_socio')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('El responsable del socio no puede exceder 100 caracteres')
+    .trim(),
+
+  body('responsable_entel')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('El responsable Entel no puede exceder 100 caracteres')
+    .trim(),
+
+  body('es_accesorio')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo es_accesorio debe ser true o false'),
+
+  body('equipo_principal_id')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('El ID del equipo principal debe ser un número entero positivo'),
+
+  body('observaciones')
+    .optional()
+    .trim(),
+
+  body('activo')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo activo debe ser true o false'),
 ];
