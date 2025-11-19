@@ -168,7 +168,19 @@ export const listarEquipos = async (filtros: FiltrosEquipo = {}) => {
   const whereClause = condiciones.length > 0 ? `WHERE ${condiciones.join(' AND ')}` : '';
 
   // Contar total
-  const queryCount = `SELECT COUNT(*) as total FROM equipos e ${whereClause}`;
+  const queryCount = `
+  SELECT COUNT(*) as total 
+  FROM equipos e
+  INNER JOIN modelos m ON e.modelo_id = m.id
+  INNER JOIN marcas ma ON m.marca_id = ma.id
+  INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+  INNER JOIN categorias c ON sc.categoria_id = c.id
+  LEFT JOIN tienda t ON e.tienda_id = t.id
+  LEFT JOIN ordenes_compra oc ON e.orden_compra_id = oc.id
+  LEFT JOIN equipos ep ON e.equipo_principal_id = ep.id
+  ${whereClause}
+`;
+
   const [totalRows] = await pool.execute<RowDataPacket[]>(queryCount, valores);
   const total = totalRows[0].total;
 
