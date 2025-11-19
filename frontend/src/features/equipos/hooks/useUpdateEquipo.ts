@@ -7,8 +7,8 @@ export const useUpdateEquipo = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
-      actualizarEquipo(id, data),
+    mutationFn: ({ id, datos }: { id: number; datos: any }) =>
+      actualizarEquipo(id, datos),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['equipos'] });
       toast.success('Equipo actualizado', {

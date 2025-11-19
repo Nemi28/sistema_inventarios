@@ -96,3 +96,16 @@ export const obtenerModelosPorMarcaYSubcategoria = async (
   );
   return data.data;
 };
+
+/**
+ * Obtener modelo por ID con información completa
+ */
+export const obtenerModeloPorId = async (id: number) => {
+  try {
+    const response = await api.get(`/api/modelos/${id}`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error al obtener modelo:', error);
+    throw error;
+  }
+};

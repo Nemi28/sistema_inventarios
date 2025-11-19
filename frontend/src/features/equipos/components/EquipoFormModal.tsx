@@ -4,20 +4,20 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -25,14 +25,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { equipoSchema, EquipoFormValues } from '../../../lib/equipos-validations';
 import { useCreateEquipo } from '../hooks/useCreateEquipo';
 import { useUpdateEquipo } from '../hooks/useUpdateEquipo';
-import { useCategorias } from '@/features/categorias/hooks/useCategorias';
-import { useOrdenesCompraActivas } from '@/features/ordenes_compra/hooks/useOrdenesCompraActivas';
-import { Equipo, ESTADOS_EQUIPO } from '../types';
-import { equipoSchema, EquipoFormValues } from '@/lib/equipos-validations';
+import { Equipo } from '../types';
+import { obtenerTiendas } from '@/features/tiendas/services/tiendas.service';
+import { obtenerOrdenesCompra } from '@/features/ordenes_compra/services/ordenes_compra.service';
+import { obtenerModeloPorId } from '@/features/modelos/services/modelos.service';
+import { ModeloSelector } from '@/components/common/ModeloSelector';
+import { TiendaCombobox } from '@/components/common/TiendaCombobox';
 
 interface EquipoFormModalProps {
   open: boolean;
@@ -45,283 +50,207 @@ export const EquipoFormModal = ({
   onOpenChange,
   equipo,
 }: EquipoFormModalProps) => {
-  const [showDetalles, setShowDetalles] = useState(false);
-  const [detalleText, setDetalleText] = useState('');
-  const [jsonError, setJsonError] = useState('');
-
   const isEditing = !!equipo;
-
-  // Hooks
   const createMutation = useCreateEquipo();
   const updateMutation = useUpdateEquipo();
-  const { data: categoriasData } = useCategorias({ activo: true });
+  
+  const [tiendas, setTiendas] = useState<any[]>([]);
+  const [ordenesCompra, setOrdenesCompra] = useState<any[]>([]);
+  const [loadingTiendas, setLoadingTiendas] = useState(false);
+  const [loadingOrdenes, setLoadingOrdenes] = useState(false);
 
-  const categorias = categoriasData?.data || [];
+  // Estado para el selector de modelo
+  const [modeloSelectorValue, setModeloSelectorValue] = useState({
+    categoria_id: 0,
+    subcategoria_id: 0,
+    marca_id: 0,
+    modelo_id: 0,
+  });
 
-  const { data: ordenesData } = useOrdenesCompraActivas();
-  const ordenesCompra = ordenesData?.data || [];
-
-  // Form
   const form = useForm<EquipoFormValues>({
     resolver: zodResolver(equipoSchema),
     defaultValues: {
-      categoria_id: 0,
-      nombre: '',
-      marca: '',
-      modelo: '',
       numero_serie: '',
       inv_entel: '',
-      estado: 'nuevo',
-      observacion: '',
+      modelo_id: 0,
+      orden_compra_id: undefined,
+      tipo_propiedad: 'PROPIO',
+      fecha_compra: '',
+      garantia: false,
+      sistema_operativo: '',
+      estado_actual: 'POR_VALIDAR',
+      ubicacion_actual: 'ALMACEN',
+      tienda_id: undefined,
+      hostname: '',
+      posicion_tienda: '',
+      area_tienda: '',
+      responsable_socio: '',
+      responsable_entel: '',
+      es_accesorio: false,
+      equipo_principal_id: undefined,
+      observaciones: '',
       activo: true,
-      orden_compra_id: null,
     },
+    mode: 'onChange',
   });
 
-  // Cargar datos del equipo al editar
+  // Cargar datos necesarios
+  useEffect(() => {
+    if (open) {
+      // Cargar tiendas
+      setLoadingTiendas(true);
+      obtenerTiendas()
+        .then((data) => setTiendas(data || []))
+        .catch((error) => console.error('Error al cargar tiendas:', error))
+        .finally(() => setLoadingTiendas(false));
+
+      // Cargar órdenes de compra
+      setLoadingOrdenes(true);
+      obtenerOrdenesCompra()
+        .then((data) => setOrdenesCompra(data || []))
+        .catch((error) => console.error('Error al cargar órdenes:', error))
+        .finally(() => setLoadingOrdenes(false));
+    }
+  }, [open]);
+
+  // Resetear form cuando cambia el equipo
   useEffect(() => {
     if (equipo && open) {
       form.reset({
-        orden_compra_id: equipo.orden_compra_id,
-        categoria_id: equipo.categoria_id,
-        nombre: equipo.nombre,
-        marca: equipo.marca,
-        modelo: equipo.modelo,
         numero_serie: equipo.numero_serie || '',
         inv_entel: equipo.inv_entel || '',
-        estado: equipo.estado,
-        observacion: equipo.observacion || '',
-        activo: Boolean(equipo.activo),
+        modelo_id: equipo.modelo_id || 0,
+        orden_compra_id: equipo.orden_compra_id || undefined,
+        tipo_propiedad: equipo.tipo_propiedad || 'PROPIO',
+        fecha_compra: equipo.fecha_compra || '',
+        garantia: equipo.garantia ?? false,
+        sistema_operativo: equipo.sistema_operativo || '',
+        estado_actual: equipo.estado_actual || 'POR_VALIDAR',
+        ubicacion_actual: equipo.ubicacion_actual || 'ALMACEN',
+        tienda_id: equipo.tienda_id || undefined,
+        hostname: equipo.hostname || '',
+        posicion_tienda: equipo.posicion_tienda || '',
+        area_tienda: equipo.area_tienda || '',
+        responsable_socio: equipo.responsable_socio || '',
+        responsable_entel: equipo.responsable_entel || '',
+        es_accesorio: equipo.es_accesorio ?? false,
+        equipo_principal_id: equipo.equipo_principal_id || undefined,
+        observaciones: equipo.observaciones || '',
+        activo: equipo.activo ?? true,
       });
 
-      if (equipo.detalle) {
-        setDetalleText(JSON.stringify(equipo.detalle, null, 2));
-        setShowDetalles(true);
+      // Cargar información completa del modelo para obtener categoria_id, subcategoria_id, marca_id
+      if (equipo.modelo_id) {
+        obtenerModeloPorId(equipo.modelo_id)
+          .then((modeloData) => {
+            if (modeloData) {
+              setModeloSelectorValue({
+                categoria_id: modeloData.categoria_id || 0,
+                subcategoria_id: modeloData.subcategoria_id || 0,
+                marca_id: modeloData.marca_id || 0,
+                modelo_id: equipo.modelo_id || 0,
+              });
+            }
+          })
+          .catch((error) => console.error('Error al cargar modelo:', error));
       }
-    } else if (open && !equipo) {
+    } else if (!equipo && open) {
       form.reset({
-        categoria_id: 0,
-        nombre: '',
-        marca: '',
-        modelo: '',
         numero_serie: '',
         inv_entel: '',
-        estado: 'nuevo',
-        observacion: '',
+        modelo_id: 0,
+        orden_compra_id: undefined,
+        tipo_propiedad: 'PROPIO',
+        fecha_compra: '',
+        garantia: false,
+        sistema_operativo: '',
+        estado_actual: 'POR_VALIDAR',
+        ubicacion_actual: 'ALMACEN',
+        tienda_id: undefined,
+        hostname: '',
+        posicion_tienda: '',
+        area_tienda: '',
+        responsable_socio: '',
+        responsable_entel: '',
+        es_accesorio: false,
+        equipo_principal_id: undefined,
+        observaciones: '',
         activo: true,
-        orden_compra_id: null,
       });
-      setDetalleText('');
-      setShowDetalles(false);
-      setJsonError('');
+
+      // Resetear selector de modelo
+      setModeloSelectorValue({
+        categoria_id: 0,
+        subcategoria_id: 0,
+        marca_id: 0,
+        modelo_id: 0,
+      });
     }
   }, [equipo, open, form]);
 
-  // Validar JSON en tiempo real
-  useEffect(() => {
-    if (detalleText.trim() === '') {
-      setJsonError('');
-      return;
-    }
-
-    try {
-      JSON.parse(detalleText);
-      setJsonError('');
-    } catch {
-      setJsonError('JSON inválido');
-    }
-  }, [detalleText]);
-
   const onSubmit = async (data: EquipoFormValues) => {
-    // Parsear detalle JSON si existe
-    let detalleParsed = null;
-    if (detalleText.trim()) {
-      try {
-        detalleParsed = JSON.parse(detalleText);
-      } catch {
-        setJsonError('El JSON no es válido');
-        return;
+    try {
+      const cleanData = {
+        numero_serie: data.numero_serie?.trim() || undefined,
+        inv_entel: data.inv_entel?.trim() || undefined,
+        modelo_id: data.modelo_id,
+        orden_compra_id: data.orden_compra_id || undefined,
+        tipo_propiedad: data.tipo_propiedad,
+        fecha_compra: data.fecha_compra?.trim() || undefined,
+        garantia: !!data.garantia,
+        sistema_operativo: data.sistema_operativo?.trim() || undefined,
+        estado_actual: data.estado_actual,
+        ubicacion_actual: data.ubicacion_actual,
+        tienda_id: data.tienda_id || undefined,
+        hostname: data.hostname?.trim() || undefined,
+        posicion_tienda: data.posicion_tienda?.trim() || undefined,
+        area_tienda: data.area_tienda?.trim() || undefined,
+        responsable_socio: data.responsable_socio?.trim() || undefined,
+        responsable_entel: data.responsable_entel?.trim() || undefined,
+        es_accesorio: !!data.es_accesorio,
+        equipo_principal_id: data.equipo_principal_id || undefined,
+        observaciones: data.observaciones?.trim() || undefined,
+        activo: !!data.activo,
+      };
+
+      if (isEditing) {
+        await updateMutation.mutateAsync({ id: equipo.id, datos: cleanData });
+      } else {
+        await createMutation.mutateAsync(cleanData);
       }
-    }
-
-    const formData = {
-      ...data,
-      numero_serie: data.numero_serie || null,
-      inv_entel: data.inv_entel || null,
-      observacion: data.observacion || null,
-      detalle: detalleParsed,
-    };
-
-    if (isEditing) {
-      updateMutation.mutate(
-        { id: equipo.id, data: formData },
-        {
-          onSuccess: () => {
-            onOpenChange(false);
-            form.reset();
-            setDetalleText('');
-            setShowDetalles(false);
-          },
-        }
-      );
-    } else {
-      createMutation.mutate(formData, {
-        onSuccess: () => {
-          onOpenChange(false);
-          form.reset();
-          setDetalleText('');
-          setShowDetalles(false);
-        },
-      });
+      
+      onOpenChange(false);
+    } catch (error) {
+      console.error('❌ Error:', error);
     }
   };
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const ubicacionActual = form.watch('ubicacion_actual');
+  const isLoading = createMutation.isPending || updateMutation.isPending;
+
+  // Handler para el selector de modelo
+  const handleModeloSelectorChange = (value: any) => {
+    setModeloSelectorValue(value);
+    form.setValue('modelo_id', value.modelo_id);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Editar Equipo' : 'Crear Nuevo Equipo'}
+            {isEditing ? 'Editar Equipo' : 'Crear nuevo Equipo'}
           </DialogTitle>
+          <DialogDescription>
+            {isEditing 
+              ? 'Modifica los datos del equipo existente' 
+              : 'Completa el formulario para crear un nuevo equipo'}
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Información Básica */}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Categoría */}
-              <FormField
-                control={form.control}
-                name="categoria_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoría *</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(Number(value))}
-                      value={field.value?.toString() || ''}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona una categoría" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categorias.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id.toString()}>
-                            {cat.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {/* Orden de Compra */}
-<FormField
-  control={form.control}
-  name="orden_compra_id"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Orden de Compra</FormLabel>
-      <Select
-        onValueChange={(value) => 
-          field.onChange(value === 'null' ? null : Number(value))
-        }
-        value={field.value?.toString() || 'null'}
-      >
-        <FormControl>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecciona una orden (opcional)" />
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent>
-          <SelectItem value="null">Sin orden de compra</SelectItem>
-          {ordenesCompra.map((orden) => (
-            <SelectItem key={orden.id} value={orden.id.toString()}>
-              {orden.numero_orden} - {new Date(orden.fecha_ingreso).toLocaleDateString()}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
-
-              {/* Estado */}
-              <FormField
-                control={form.control}
-                name="estado"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estado *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona un estado" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {ESTADOS_EQUIPO.map((estado) => (
-                          <SelectItem key={estado.value} value={estado.value}>
-                            {estado.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Nombre */}
-              <FormField
-                control={form.control}
-                name="nombre"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre del Equipo *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: Laptop HP EliteBook" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Marca */}
-              <FormField
-                control={form.control}
-                name="marca"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Marca *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: HP" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Modelo */}
-              <FormField
-                control={form.control}
-                name="modelo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Modelo *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: EliteBook 840 G8" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {/* Número de Serie */}
               <FormField
                 control={form.control}
@@ -330,30 +259,167 @@ export const EquipoFormModal = ({
                   <FormItem>
                     <FormLabel>Número de Serie</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Ej: 5CD1234ABC"
+                      <Input 
+                        placeholder="SN123456789" 
+                        className="font-mono"
                         {...field}
                         value={field.value || ''}
                       />
+                    </FormControl>
+                    <FormDescription>Opcional</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Inventario Entel */}
+              <FormField
+                control={form.control}
+                name="inv_entel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Inventario Entel</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="INV-2024-001" 
+                        className="font-mono"
+                        {...field}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormDescription>Código único</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* ✅ COMPONENTE REUTILIZABLE DE MODELO */}
+            <div>
+              <ModeloSelector
+                value={modeloSelectorValue}
+                onChange={handleModeloSelectorChange}
+                errors={{
+                  categoria_id: form.formState.errors.modelo_id?.message,
+                }}
+                labels={{
+                  categoria: 'Categoría',
+                  subcategoria: 'Equipo',
+                  marca: 'Marca',
+                  modelo: 'Modelo',
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Tipo de Propiedad */}
+              <FormField
+                control={form.control}
+                name="tipo_propiedad"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Propiedad *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="PROPIO">Propio</SelectItem>
+                        <SelectItem value="ALQUILADO">Alquilado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Orden de Compra */}
+              <FormField
+                control={form.control}
+                name="orden_compra_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Orden de Compra</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        const numValue = parseInt(value);
+                        field.onChange(numValue === 0 ? undefined : numValue);
+                      }}
+                      value={field.value?.toString() || '0'}
+                      disabled={loadingOrdenes}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sin OC" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="0">Sin orden de compra</SelectItem>
+                        {ordenesCompra.map((orden) => (
+                          <SelectItem key={orden.id} value={orden.id.toString()}>
+                            {orden.numero_orden}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>Opcional</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Fecha de Compra */}
+              <FormField
+                control={form.control}
+                name="fecha_compra"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fecha de Compra</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Inventario ENTEL */}
+              {/* Garantía */}
               <FormField
                 control={form.control}
-                name="inv_entel"
+                name="garantia"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 mt-2">
+                    <div className="space-y-0.5">
+                      <FormLabel>Garantía</FormLabel>
+                    </div>
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value || false}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        className="h-5 w-5"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {/* Sistema Operativo */}
+              <FormField
+                control={form.control}
+                name="sistema_operativo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Inventario ENTEL</FormLabel>
+                    <FormLabel>Sistema Operativo</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Código interno"
-                        {...field}
-                        value={field.value || ''}
-                      />
+                      <Input placeholder="Windows 10" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -361,16 +427,189 @@ export const EquipoFormModal = ({
               />
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Estado Actual */}
+              <FormField
+                control={form.control}
+                name="estado_actual"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado Actual *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="OPERATIVO">Operativo</SelectItem>
+                        <SelectItem value="POR_VALIDAR">Por Validar</SelectItem>
+                        <SelectItem value="EN_GARANTIA">En Garantía</SelectItem>
+                        <SelectItem value="INOPERATIVO">Inoperativo</SelectItem>
+                        <SelectItem value="BAJA">Baja</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Ubicación Actual */}
+              <FormField
+                control={form.control}
+                name="ubicacion_actual"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ubicación Actual *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="ALMACEN">Almacén</SelectItem>
+                        <SelectItem value="TIENDA">Tienda</SelectItem>
+                        <SelectItem value="PERSONA">Persona</SelectItem>
+                        <SelectItem value="EN_TRANSITO">En Tránsito</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Campos de Tienda - Solo si ubicación es TIENDA */}
+            {ubicacionActual === 'TIENDA' && (
+              <>
+                {/* ✅ USAR EL COMPONENTE REUTILIZABLE */}
+                <TiendaCombobox
+                  control={form.control}
+                  name="tienda_id"
+                  label="Tienda"
+                  placeholder="Buscar tienda por nombre o PDV..."
+                  tiendas={tiendas}
+                  isLoading={loadingTiendas}
+                  required={false}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="hostname"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hostname</FormLabel>
+                        <FormControl>
+                          <Input placeholder="PC-TIENDA-01" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="posicion_tienda"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Posición</FormLabel>
+                        <FormControl>
+                          <Input placeholder="5" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="area_tienda"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Área</FormLabel>
+                        <FormControl>
+                          <Input placeholder="CAJA" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="responsable_socio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Responsable Socio</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nombre del responsable" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="responsable_entel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Responsable Entel</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nombre del responsable" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Es Accesorio */}
+            <FormField
+              control={form.control}
+              name="es_accesorio"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">¿Es accesorio?</FormLabel>
+                    <FormDescription>
+                      Marcar si este equipo es un accesorio de otro equipo principal
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <input
+                      type="checkbox"
+                      checked={field.value || false}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      className="h-5 w-5"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
             {/* Observaciones */}
             <FormField
               control={form.control}
-              name="observacion"
+              name="observaciones"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Observaciones</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Notas adicionales sobre el equipo..."
+                    <Textarea 
+                      placeholder="Información adicional del equipo..."
                       className="resize-none"
                       rows={3}
                       {...field}
@@ -382,77 +621,44 @@ export const EquipoFormModal = ({
               )}
             />
 
-            {/* Detalles Técnicos (Colapsable) */}
-            <div className="border rounded-lg p-4">
-              <button
-                type="button"
-                onClick={() => setShowDetalles(!showDetalles)}
-                className="flex items-center justify-between w-full text-left font-medium"
-              >
-                <span>Detalles Técnicos (Opcional)</span>
-                {showDetalles ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </button>
-
-              {showDetalles && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-sm text-gray-500">
-                    Ingresa especificaciones técnicas en formato JSON
-                  </p>
-                  <Textarea
-                    placeholder='{"procesador": "Intel i7", "ram": "16GB", "disco": "512GB SSD"}'
-                    className="font-mono text-sm"
-                    rows={6}
-                    value={detalleText}
-                    onChange={(e) => setDetalleText(e.target.value)}
-                  />
-                  {jsonError && (
-                    <p className="text-sm text-red-600">{jsonError}</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Activo */}
+            {/* Estado Activo */}
             <FormField
               control={form.control}
               name="activo"
               render={({ field }) => (
-                <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">Estado Activo</FormLabel>
-                    <div className="text-sm text-gray-500">
-                      Activar o desactivar este equipo en el sistema
-                    </div>
+                    <FormLabel className="text-base">Estado</FormLabel>
+                    <FormDescription>
+                      El equipo estará {field.value ? 'activo' : 'inactivo'} en el sistema
+                    </FormDescription>
                   </div>
                   <FormControl>
-                    <Switch
+                    <input
+                      type="checkbox"
                       checked={field.value}
-                      onCheckedChange={field.onChange}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      className="h-5 w-5"
                     />
                   </FormControl>
                 </FormItem>
               )}
             />
 
-            {/* Botones */}
-            <div className="flex justify-end gap-3">
+            <DialogFooter>
               <Button
                 type="button"
-                variant="outline"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800"
                 onClick={() => onOpenChange(false)}
-                disabled={isPending}
+                disabled={isLoading}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending || !!jsonError}>
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Actualizar' : 'Crear'} Equipo
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isEditing ? 'Actualizar' : 'Crear'}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
         </Form>
       </DialogContent>

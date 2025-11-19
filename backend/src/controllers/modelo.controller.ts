@@ -402,3 +402,4 @@ export const obtenerModelosPorMarcaYSubcategoria = async (req: Request, res: Res
     });
   }
 };
+

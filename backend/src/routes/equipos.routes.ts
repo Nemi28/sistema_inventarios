@@ -4,13 +4,9 @@
  */
 
 import { Router } from 'express';
-import * as equiposController from '../controllers/equipos.controller';
+import * as equipoController from '../controllers/equipos.controller';
 import { verificarToken, verificarRol } from '../middlewares/auth.middleware';
-import { 
-  validarCrearEquipo, 
-  validarActualizarEquipo,
-  validarCrearEquiposMultiple 
-} from '../middlewares/equipos.validators';
+import { validarCrearEquipo, validarActualizarEquipo } from '../middlewares/equipos.validators';
 
 const router = Router();
 
@@ -19,34 +15,25 @@ const router = Router();
  */
 
 // GET /api/equipos - Listar equipos con paginación y filtros
-router.get('/', verificarToken, equiposController.listarEquipos);
+router.get('/', verificarToken, equipoController.listar);
 
 // GET /api/equipos/buscar?q=termino - Buscar equipos
-router.get('/buscar', verificarToken, equiposController.buscarEquipos);
+router.get('/buscar', verificarToken, equipoController.buscar);
 
 // GET /api/equipos/:id - Obtener equipo por ID
-router.get('/:id', verificarToken, equiposController.obtenerEquipoPorId);
+router.get('/:id', verificarToken, equipoController.obtenerPorId);
 
 /**
  * Rutas protegidas (requieren rol gestor o administrador)
  */
 
-// POST /api/equipos - Crear nuevo equipo (individual)
+// POST /api/equipos - Crear nuevo equipo
 router.post(
   '/',
   verificarToken,
   verificarRol('gestor', 'administrador'),
   validarCrearEquipo,
-  equiposController.crearEquipo
-);
-
-// POST /api/equipos/multiple - Crear múltiples equipos (hasta 50)
-router.post(
-  '/multiple',
-  verificarToken,
-  verificarRol('gestor', 'administrador'),
-  validarCrearEquiposMultiple,
-  equiposController.crearEquiposMultiple
+  equipoController.crear
 );
 
 // PUT /api/equipos/:id - Actualizar equipo
@@ -55,7 +42,7 @@ router.put(
   verificarToken,
   verificarRol('gestor', 'administrador'),
   validarActualizarEquipo,
-  equiposController.actualizarEquipo
+  equipoController.actualizar
 );
 
 /**
@@ -67,7 +54,7 @@ router.delete(
   '/:id',
   verificarToken,
   verificarRol('administrador'),
-  equiposController.eliminarEquipo
+  equipoController.eliminar
 );
 
 export default router;

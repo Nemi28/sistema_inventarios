@@ -4,7 +4,7 @@
  */
 
 import { pool } from '../config/database';
-import { RowDataPacket, ResultSetHeader, PoolConnection } from 'mysql2/promise';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import {
   calcularPaginacion,
   generarPaginacion,
@@ -14,189 +14,99 @@ import {
 
 export interface Equipo {
   id?: number;
-  orden_compra_id?: number | null;
-  categoria_id: number;
-  nombre: string;
-  marca: string;
-  modelo: string;
-  numero_serie?: string | null;
-  inv_entel?: string | null;
-  estado: 'nuevo' | 'operativo' | 'inoperativo' | 'perdido' | 'baja' | 'por validar' | 'otro';
-  observacion?: string | null;
+  numero_serie?: string;
+  inv_entel?: string;
+  modelo_id: number;
+  orden_compra_id?: number;
+  tipo_propiedad: 'PROPIO' | 'ALQUILADO';
+  fecha_compra?: Date | string | null;
+  garantia?: boolean;
+  sistema_operativo?: string;
+  estado_actual: 'OPERATIVO' | 'POR_VALIDAR' | 'EN_GARANTIA' | 'BAJA' | 'INOPERATIVO';
+  ubicacion_actual: 'ALMACEN' | 'TIENDA' | 'PERSONA' | 'EN_TRANSITO';
+  tienda_id?: number;
+  hostname?: string;
+  posicion_tienda?: string;
+  area_tienda?: string;
+  responsable_socio?: string;
+  responsable_entel?: string;
+  es_accesorio?: boolean;
+  equipo_principal_id?: number;
+  observaciones?: string;
   activo?: boolean;
-  fecha_creacion?: Date;
-  fecha_actualizacion?: Date;
-}
-
-export interface DetalleEquipo {
-  id?: number;
-  equipo_id: number;
-  detalle: any; // JSON flexible
   fecha_creacion?: Date;
   fecha_actualizacion?: Date;
 }
 
 export interface EquipoCompleto extends Equipo {
-  detalle?: any;
+  modelo_nombre?: string;
+  marca_nombre?: string;
   categoria_nombre?: string;
-  orden_compra_numero?: string;
-}
-
-export interface EquipoConRelaciones extends Equipo {
-  categoria_nombre?: string;
-  orden_compra_numero?: string;
-  orden_compra_fecha?: Date;
-  detalle?: any;
+  subcategoria_nombre?: string;
+  tienda_nombre?: string;
+  tienda_pdv?: string;
+  orden_numero?: string;
+  equipo_principal_serie?: string;
 }
 
 export interface FiltrosEquipo extends PaginacionParams {
   activo?: boolean;
-  categoria_id?: number;
-  orden_compra_id?: number;
-  estado?: string;
+  modelo_id?: number;
+  estado_actual?: string;
+  ubicacion_actual?: string;
+  tienda_id?: number;
+  tipo_propiedad?: string;
+  garantia?: boolean;
+  es_accesorio?: boolean;
   ordenar_por?: string;
   orden?: string;
 }
 
-export interface EquipoParaCrear extends Equipo {
-  detalle?: any;
-}
-
 /**
- * Crear nuevo Equipo (individual)
+ * Crear nuevo Equipo
  */
-export const crearEquipo = async (equipo: EquipoParaCrear): Promise<number> => {
-  const connection = await pool.getConnection();
-  
+export const crearEquipo = async (equipo: Equipo): Promise<number> => {
   try {
-    await connection.beginTransaction();
-
-    // Insertar equipo
-    const queryEquipo = `
+    const query = `
       INSERT INTO equipos (
-        orden_compra_id, categoria_id, nombre, marca, modelo, 
-        numero_serie, inv_entel, estado, observacion, activo
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        numero_serie, inv_entel, modelo_id, orden_compra_id,
+        tipo_propiedad, fecha_compra, garantia, sistema_operativo,
+        estado_actual, ubicacion_actual, tienda_id,
+        hostname, posicion_tienda, area_tienda,
+        responsable_socio, responsable_entel,
+        es_accesorio, equipo_principal_id, observaciones, activo
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const [resultadoEquipo] = await connection.execute<ResultSetHeader>(queryEquipo, [
-      equipo.orden_compra_id ?? null,
-      equipo.categoria_id,
-      equipo.nombre,
-      equipo.marca,
-      equipo.modelo,
-      equipo.numero_serie ?? null,
-      equipo.inv_entel ?? null,
-      equipo.estado,
-      equipo.observacion ?? null,
+    const [resultado] = await pool.execute<ResultSetHeader>(query, [
+      equipo.numero_serie || null,
+      equipo.inv_entel || null,
+      equipo.modelo_id,
+      equipo.orden_compra_id || null,
+      equipo.tipo_propiedad,
+      equipo.fecha_compra || null,
+      equipo.garantia ?? false,
+      equipo.sistema_operativo || null,
+      equipo.estado_actual,
+      equipo.ubicacion_actual,
+      equipo.tienda_id || null,
+      equipo.hostname || null,
+      equipo.posicion_tienda || null,
+      equipo.area_tienda || null,
+      equipo.responsable_socio || null,
+      equipo.responsable_entel || null,
+      equipo.es_accesorio ?? false,
+      equipo.equipo_principal_id || null,
+      equipo.observaciones || null,
       equipo.activo ?? true,
     ]);
 
-    const equipoId = resultadoEquipo.insertId;
-
-    // Insertar detalle si existe
-    if (equipo.detalle) {
-      const queryDetalle = `
-        INSERT INTO detalles_equipos (equipo_id, detalle)
-        VALUES (?, ?)
-      `;
-      
-      await connection.execute(queryDetalle, [
-        equipoId,
-        JSON.stringify(equipo.detalle),
-      ]);
-    }
-
-    await connection.commit();
-    return equipoId;
-
+    return resultado.insertId;
   } catch (error: any) {
-    await connection.rollback();
-    
-    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-      if (error.message.includes('categoria_id')) {
-        throw new Error('La categoría especificada no existe');
-      }
-      if (error.message.includes('orden_compra_id')) {
-        throw new Error('La orden de compra especificada no existe');
-      }
+    if (error.code === 'ER_DUP_ENTRY') {
+      throw new Error('Ya existe un equipo con ese código de inventario');
     }
-    
     throw error;
-  } finally {
-    connection.release();
-  }
-};
-
-/**
- * Crear múltiples Equipos (registro masivo con transacción)
- */
-export const crearEquiposMultiple = async (equipos: EquipoParaCrear[]): Promise<number[]> => {
-  const connection = await pool.getConnection();
-  const equiposCreados: number[] = [];
-
-  try {
-    await connection.beginTransaction();
-
-    for (const equipo of equipos) {
-      // Insertar equipo
-      const queryEquipo = `
-        INSERT INTO equipos (
-          orden_compra_id, categoria_id, nombre, marca, modelo, 
-          numero_serie, inv_entel, estado, observacion, activo
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      const [resultadoEquipo] = await connection.execute<ResultSetHeader>(queryEquipo, [
-        equipo.orden_compra_id ?? null,
-        equipo.categoria_id,
-        equipo.nombre,
-        equipo.marca,
-        equipo.modelo,
-        equipo.numero_serie ?? null,
-        equipo.inv_entel ?? null,
-        equipo.estado,
-        equipo.observacion ?? null,
-        equipo.activo ?? true,
-      ]);
-
-      const equipoId = resultadoEquipo.insertId;
-      equiposCreados.push(equipoId);
-
-      // Insertar detalle si existe
-      if (equipo.detalle) {
-        const queryDetalle = `
-          INSERT INTO detalles_equipos (equipo_id, detalle)
-          VALUES (?, ?)
-        `;
-        
-        await connection.execute(queryDetalle, [
-          equipoId,
-          JSON.stringify(equipo.detalle),
-        ]);
-      }
-    }
-
-    await connection.commit();
-    return equiposCreados;
-
-  } catch (error: any) {
-    await connection.rollback();
-    
-    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-      if (error.message.includes('categoria_id')) {
-        throw new Error('Una o más categorías especificadas no existen');
-      }
-      if (error.message.includes('orden_compra_id')) {
-        throw new Error('Una o más órdenes de compra especificadas no existen');
-      }
-    }
-    
-    throw error;
-  } finally {
-    connection.release();
   }
 };
 
@@ -208,7 +118,7 @@ export const listarEquipos = async (filtros: FiltrosEquipo = {}) => {
   const { campo, direccion } = validarOrdenamiento(
     filtros.ordenar_por,
     filtros.orden,
-    ['nombre', 'marca', 'modelo', 'estado', 'inv_entel', 'fecha_creacion', 'fecha_actualizacion']
+    ['e.numero_serie', 'e.inv_entel', 'e.estado_actual', 'e.ubicacion_actual', 'e.fecha_creacion', 'e.fecha_actualizacion']
   );
 
   // Construir WHERE dinámico
@@ -220,19 +130,39 @@ export const listarEquipos = async (filtros: FiltrosEquipo = {}) => {
     valores.push(filtros.activo);
   }
 
-  if (filtros.categoria_id) {
-    condiciones.push('e.categoria_id = ?');
-    valores.push(filtros.categoria_id);
+  if (filtros.modelo_id) {
+    condiciones.push('e.modelo_id = ?');
+    valores.push(filtros.modelo_id);
   }
 
-  if (filtros.orden_compra_id) {
-    condiciones.push('e.orden_compra_id = ?');
-    valores.push(filtros.orden_compra_id);
+  if (filtros.estado_actual) {
+    condiciones.push('e.estado_actual = ?');
+    valores.push(filtros.estado_actual);
   }
 
-  if (filtros.estado) {
-    condiciones.push('e.estado = ?');
-    valores.push(filtros.estado);
+  if (filtros.ubicacion_actual) {
+    condiciones.push('e.ubicacion_actual = ?');
+    valores.push(filtros.ubicacion_actual);
+  }
+
+  if (filtros.tienda_id) {
+    condiciones.push('e.tienda_id = ?');
+    valores.push(filtros.tienda_id);
+  }
+
+  if (filtros.tipo_propiedad) {
+    condiciones.push('e.tipo_propiedad = ?');
+    valores.push(filtros.tipo_propiedad);
+  }
+
+  if (filtros.garantia !== undefined) {
+    condiciones.push('e.garantia = ?');
+    valores.push(filtros.garantia);
+  }
+
+  if (filtros.es_accesorio !== undefined) {
+    condiciones.push('e.es_accesorio = ?');
+    valores.push(filtros.es_accesorio);
   }
 
   const whereClause = condiciones.length > 0 ? `WHERE ${condiciones.join(' AND ')}` : '';
@@ -246,16 +176,24 @@ export const listarEquipos = async (filtros: FiltrosEquipo = {}) => {
   const querySelect = `
     SELECT 
       e.*,
+      m.nombre as modelo_nombre,
+      ma.nombre as marca_nombre,
       c.nombre as categoria_nombre,
-      oc.numero_orden as orden_compra_numero,
-      oc.fecha_ingreso as orden_compra_fecha,
-      de.detalle as detalle
+      sc.nombre as subcategoria_nombre,
+      t.nombre_tienda as tienda_nombre,
+      t.pdv as tienda_pdv,
+      oc.numero_orden as orden_numero,
+      ep.numero_serie as equipo_principal_serie
     FROM equipos e
-    INNER JOIN categorias c ON e.categoria_id = c.id
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    LEFT JOIN tienda t ON e.tienda_id = t.id
     LEFT JOIN ordenes_compra oc ON e.orden_compra_id = oc.id
-    LEFT JOIN detalles_equipos de ON e.id = de.equipo_id
+    LEFT JOIN equipos ep ON e.equipo_principal_id = ep.id
     ${whereClause} 
-    ORDER BY e.${campo} ${direccion} 
+    ORDER BY ${campo} ${direccion} 
     LIMIT ${limit} OFFSET ${offset}
   `;
   const [equipos] = await pool.execute<RowDataPacket[]>(querySelect, valores);
@@ -267,22 +205,24 @@ export const listarEquipos = async (filtros: FiltrosEquipo = {}) => {
 };
 
 /**
- * Buscar Equipos por nombre, marca, modelo, número de serie o inv_entel
+ * Buscar Equipos por serial, inv_entel, modelo, marca, etc
  */
 export const buscarEquipos = async (termino: string, filtros: PaginacionParams = {}) => {
   const { page, limit, offset } = calcularPaginacion(filtros);
-
   const terminoBusqueda = `%${termino}%`;
 
   // Contar total de resultados
   const queryCount = `
     SELECT COUNT(*) as total FROM equipos e
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    LEFT JOIN tienda t ON e.tienda_id = t.id
     WHERE (
-      e.nombre LIKE ? OR 
-      e.marca LIKE ? OR 
-      e.modelo LIKE ? OR 
       e.numero_serie LIKE ? OR 
-      e.inv_entel LIKE ?
+      e.inv_entel LIKE ? OR 
+      m.nombre LIKE ? OR 
+      ma.nombre LIKE ? OR
+      t.nombre_tienda LIKE ?
     ) AND e.activo = true
   `;
   const [totalRows] = await pool.execute<RowDataPacket[]>(queryCount, [
@@ -297,20 +237,24 @@ export const buscarEquipos = async (termino: string, filtros: PaginacionParams =
   const querySelect = `
     SELECT 
       e.*,
+      m.nombre as modelo_nombre,
+      ma.nombre as marca_nombre,
       c.nombre as categoria_nombre,
-      oc.numero_orden as orden_compra_numero,
-      oc.fecha_ingreso as orden_compra_fecha,
-      de.detalle as detalle
+      sc.nombre as subcategoria_nombre,
+      t.nombre_tienda as tienda_nombre,
+      t.pdv as tienda_pdv
     FROM equipos e
-    INNER JOIN categorias c ON e.categoria_id = c.id
-    LEFT JOIN ordenes_compra oc ON e.orden_compra_id = oc.id
-    LEFT JOIN detalles_equipos de ON e.id = de.equipo_id
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    LEFT JOIN tienda t ON e.tienda_id = t.id
     WHERE (
-      e.nombre LIKE ? OR 
-      e.marca LIKE ? OR 
-      e.modelo LIKE ? OR 
       e.numero_serie LIKE ? OR 
-      e.inv_entel LIKE ?
+      e.inv_entel LIKE ? OR 
+      m.nombre LIKE ? OR 
+      ma.nombre LIKE ? OR
+      t.nombre_tienda LIKE ?
     ) AND e.activo = true
     ORDER BY e.fecha_creacion DESC
     LIMIT ${limit} OFFSET ${offset}
@@ -332,90 +276,65 @@ export const buscarEquipos = async (termino: string, filtros: PaginacionParams =
 /**
  * Obtener Equipo por ID
  */
-export const obtenerEquipoPorId = async (id: number): Promise<EquipoConRelaciones | null> => {
+export const obtenerEquipoPorId = async (id: number): Promise<EquipoCompleto | null> => {
   const query = `
     SELECT 
       e.*,
+      m.nombre as modelo_nombre,
+      ma.nombre as marca_nombre,
       c.nombre as categoria_nombre,
-      oc.numero_orden as orden_compra_numero,
-      oc.fecha_ingreso as orden_compra_fecha,
-      de.detalle as detalle
+      sc.nombre as subcategoria_nombre,
+      t.nombre_tienda as tienda_nombre,
+      t.pdv as tienda_pdv,
+      oc.numero_orden as orden_numero,
+      ep.numero_serie as equipo_principal_serie
     FROM equipos e
-    INNER JOIN categorias c ON e.categoria_id = c.id
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    LEFT JOIN tienda t ON e.tienda_id = t.id
     LEFT JOIN ordenes_compra oc ON e.orden_compra_id = oc.id
-    LEFT JOIN detalles_equipos de ON e.id = de.equipo_id
+    LEFT JOIN equipos ep ON e.equipo_principal_id = ep.id
     WHERE e.id = ?
   `;
   
   const [equipos] = await pool.execute<RowDataPacket[]>(query, [id]);
 
-  return equipos.length > 0 ? (equipos[0] as EquipoConRelaciones) : null;
+  return equipos.length > 0 ? (equipos[0] as EquipoCompleto) : null;
 };
 
 /**
- * Verificar si existe una Categoría por ID
+ * Obtener Equipo por Serial
  */
-export const existeCategoriaPorId = async (categoriaId: number): Promise<boolean> => {
-  const [categorias] = await pool.execute<RowDataPacket[]>(
-    'SELECT COUNT(*) as count FROM categorias WHERE id = ?',
-    [categoriaId]
+export const obtenerEquipoPorSerial = async (serial: string): Promise<Equipo | null> => {
+  const [equipos] = await pool.execute<RowDataPacket[]>(
+    'SELECT * FROM equipos WHERE numero_serie = ?',
+    [serial]
   );
 
-  return categorias[0].count > 0;
+  return equipos.length > 0 ? (equipos[0] as Equipo) : null;
 };
 
 /**
- * Verificar si existe una Orden de Compra por ID
+ * Obtener Equipo por Inventario Entel
  */
-export const existeOrdenCompraPorId = async (ordenId: number): Promise<boolean> => {
-  const [ordenes] = await pool.execute<RowDataPacket[]>(
-    'SELECT COUNT(*) as count FROM ordenes_compra WHERE id = ?',
-    [ordenId]
+export const obtenerEquipoPorInvEntel = async (invEntel: string): Promise<Equipo | null> => {
+  const [equipos] = await pool.execute<RowDataPacket[]>(
+    'SELECT * FROM equipos WHERE inv_entel = ?',
+    [invEntel]
   );
 
-  return ordenes[0].count > 0;
+  return equipos.length > 0 ? (equipos[0] as Equipo) : null;
 };
 
 /**
  * Actualizar Equipo
  */
-export const actualizarEquipo = async (
-  id: number, 
-  datos: Partial<EquipoParaCrear>
-): Promise<boolean> => {
-  const connection = await pool.getConnection();
-  
+export const actualizarEquipo = async (id: number, datos: Partial<Equipo>): Promise<boolean> => {
   try {
-    await connection.beginTransaction();
-
-    // Actualizar tabla equipos
     const campos: string[] = [];
     const valores: any[] = [];
-
-    if (datos.orden_compra_id !== undefined) {
-      campos.push('orden_compra_id = ?');
-      valores.push(datos.orden_compra_id);
-    }
-
-    if (datos.categoria_id !== undefined) {
-      campos.push('categoria_id = ?');
-      valores.push(datos.categoria_id);
-    }
-
-    if (datos.nombre !== undefined) {
-      campos.push('nombre = ?');
-      valores.push(datos.nombre);
-    }
-
-    if (datos.marca !== undefined) {
-      campos.push('marca = ?');
-      valores.push(datos.marca);
-    }
-
-    if (datos.modelo !== undefined) {
-      campos.push('modelo = ?');
-      valores.push(datos.modelo);
-    }
 
     if (datos.numero_serie !== undefined) {
       campos.push('numero_serie = ?');
@@ -427,14 +346,92 @@ export const actualizarEquipo = async (
       valores.push(datos.inv_entel);
     }
 
-    if (datos.estado !== undefined) {
-      campos.push('estado = ?');
-      valores.push(datos.estado);
+    if (datos.modelo_id !== undefined) {
+      campos.push('modelo_id = ?');
+      valores.push(datos.modelo_id);
     }
 
-    if (datos.observacion !== undefined) {
-      campos.push('observacion = ?');
-      valores.push(datos.observacion);
+    if (datos.orden_compra_id !== undefined) {
+      campos.push('orden_compra_id = ?');
+      valores.push(datos.orden_compra_id);
+    }
+
+    if (datos.tipo_propiedad !== undefined) {
+      campos.push('tipo_propiedad = ?');
+      valores.push(datos.tipo_propiedad);
+    }
+
+    if (datos.fecha_compra !== undefined) {
+      campos.push('fecha_compra = ?');
+      const fechaValue = datos.fecha_compra === null || datos.fecha_compra === '' 
+      ? null 
+       : datos.fecha_compra;
+       valores.push(fechaValue);
+      }
+
+    if (datos.garantia !== undefined) {
+      campos.push('garantia = ?');
+      valores.push(datos.garantia);
+    }
+
+    if (datos.sistema_operativo !== undefined) {
+      campos.push('sistema_operativo = ?');
+      valores.push(datos.sistema_operativo);
+    }
+
+    if (datos.estado_actual !== undefined) {
+      campos.push('estado_actual = ?');
+      valores.push(datos.estado_actual);
+    }
+
+    if (datos.ubicacion_actual !== undefined) {
+      campos.push('ubicacion_actual = ?');
+      valores.push(datos.ubicacion_actual);
+    }
+
+    if (datos.tienda_id !== undefined) {
+      campos.push('tienda_id = ?');
+      valores.push(datos.tienda_id);
+    }
+
+    if (datos.hostname !== undefined) {
+      campos.push('hostname = ?');
+      valores.push(datos.hostname);
+    }
+
+    if (datos.posicion_tienda !== undefined) {
+      campos.push('posicion_tienda = ?');
+      valores.push(datos.posicion_tienda);
+    }
+
+    if (datos.area_tienda !== undefined) {
+      campos.push('area_tienda = ?');
+      valores.push(datos.area_tienda);
+    }
+
+    if (datos.responsable_socio !== undefined) {
+      campos.push('responsable_socio = ?');
+      valores.push(datos.responsable_socio);
+    }
+
+    if (datos.responsable_entel !== undefined) {
+      campos.push('responsable_entel = ?');
+      valores.push(datos.responsable_entel);
+    }
+
+    if (datos.es_accesorio !== undefined) {
+      campos.push('es_accesorio = ?');
+      valores.push(datos.es_accesorio);
+    }
+
+    if (datos.equipo_principal_id !== undefined) {
+      campos.push('equipo_principal_id = ?');
+      valores.push(datos.equipo_principal_id);
+    }
+
+    if (datos.observaciones !== undefined) {
+      campos.push('observaciones = ?');
+      valores.push(datos.observaciones);
     }
 
     if (datos.activo !== undefined) {
@@ -442,53 +439,21 @@ export const actualizarEquipo = async (
       valores.push(datos.activo);
     }
 
-    if (campos.length > 0) {
-      valores.push(id);
-      const queryEquipo = `UPDATE equipos SET ${campos.join(', ')} WHERE id = ?`;
-      await connection.execute<ResultSetHeader>(queryEquipo, valores);
+    if (campos.length === 0) {
+      return false;
     }
 
-    // Actualizar o crear detalle si se proporciona
-    if (datos.detalle !== undefined) {
-      // Verificar si existe detalle
-      const [detalleExistente] = await connection.execute<RowDataPacket[]>(
-        'SELECT id FROM detalles_equipos WHERE equipo_id = ?',
-        [id]
-      );
+    valores.push(id);
 
-      if (detalleExistente.length > 0) {
-        // Actualizar detalle existente
-        await connection.execute(
-          'UPDATE detalles_equipos SET detalle = ? WHERE equipo_id = ?',
-          [JSON.stringify(datos.detalle), id]
-        );
-      } else {
-        // Crear nuevo detalle
-        await connection.execute(
-          'INSERT INTO detalles_equipos (equipo_id, detalle) VALUES (?, ?)',
-          [id, JSON.stringify(datos.detalle)]
-        );
-      }
-    }
+    const query = `UPDATE equipos SET ${campos.join(', ')} WHERE id = ?`;
+    const [resultado] = await pool.execute<ResultSetHeader>(query, valores);
 
-    await connection.commit();
-    return true;
-
+    return resultado.affectedRows > 0;
   } catch (error: any) {
-    await connection.rollback();
-    
-    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-      if (error.message.includes('categoria_id')) {
-        throw new Error('La categoría especificada no existe');
-      }
-      if (error.message.includes('orden_compra_id')) {
-        throw new Error('La orden de compra especificada no existe');
-      }
+    if (error.code === 'ER_DUP_ENTRY') {
+      throw new Error('Ya existe un equipo con ese código de inventario');
     }
-    
     throw error;
-  } finally {
-    connection.release();
   }
 };
 
