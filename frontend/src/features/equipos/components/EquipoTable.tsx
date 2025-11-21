@@ -42,13 +42,16 @@ export const EquipoTable = ({
 
   return (
     <div className="space-y-4">
-      <DataTable
-        data={data}
-        columns={columns}
-        isLoading={isLoading}
-        onEdit={onEdit}
-        onDelete={onDelete}
-      />
+      {/* ← AGREGAR CONTENEDOR CON ALTURA FIJA */}
+      <div className="h-[calc(100vh-340px)] overflow-hidden">
+        <DataTable
+          data={data}
+          columns={columns}
+          isLoading={isLoading}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      </div>
 
       {pagination && pagination.total_paginas > 1 && (
         <Pagination

@@ -6,11 +6,76 @@ import { pool } from '../config/database';
 import { RowDataPacket } from 'mysql2';
 
 export class ActaPDFService {
+
+/**
+ * Divide el texto en múltiples líneas para que quepa en el ancho especificado
+ */
+private static splitTextToFitWidth(
+  text: string,
+  font: PDFFont,
+  fontSize: number,
+  maxWidth: number
+): string[] {
+  // Validar entrada y limpiar caracteres especiales
+  if (!text || text.trim() === '') {
+    return ['-'];
+  }
+
+  // CRÍTICO: Eliminar saltos de línea y otros caracteres no imprimibles
+  const cleanText = text
+    .replace(/[\n\r\t]/g, ' ')  // Reemplazar saltos de línea y tabulaciones con espacios
+    .replace(/\s+/g, ' ')        // Normalizar múltiples espacios a uno solo
+    .trim();
+
+  if (!cleanText) {
+    return ['-'];
+  }
+
+  // Si el texto cabe en una línea, devolverlo directamente
+  const textWidth = font.widthOfTextAtSize(cleanText, fontSize);
+  if (textWidth <= maxWidth) {
+    return [cleanText];
+  }
+
+  // Dividir por palabras
+  const words = cleanText.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  words.forEach((word) => {
+    const testLine = currentLine + (currentLine ? ' ' : '') + word;
+    const lineWidth = font.widthOfTextAtSize(testLine, fontSize);
+
+    if (lineWidth > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  });
+
+  // Agregar última línea
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  // Si no se pudo dividir correctamente, devolver el texto truncado
+  if (lines.length === 0) {
+    let truncated = cleanText;
+    while (font.widthOfTextAtSize(truncated, fontSize) > maxWidth && truncated.length > 0) {
+      truncated = truncated.slice(0, -1);
+    }
+    lines.push(truncated || '-');
+  }
+
+  return lines;
+}
+
   private static readonly FONT_SIZE = {
     TITLE: 14,
-    SUBTITLE: 10,
-    NORMAL: 10,
-    SMALL: 8,
+    SUBTITLE: 11,
+    NORMAL: 11,
+    SMALL: 9,
   };
 
   private static readonly COLORS = {
@@ -347,137 +412,203 @@ export class ActaPDFService {
     });
   }
 
-  /**
-   * Dibuja la tabla de equipos (entregados o recojo)
-   */
-  private static async dibujarTablaEquipos(
-    page: PDFPage,
-    font: PDFFont,
-    fontBold: PDFFont,
-    titulo: string,
-    equipos: EquipoEntregado[] | EquipoRecojo[],
-    observaciones: string | undefined,
-    yPosition: number,
-    width: number,
-    incluirEstado: boolean
-  ): Promise<number> {
-    // Título de la tabla
-    page.drawText(titulo, {
-      x: 50,
-      y: yPosition,
-      size: this.FONT_SIZE.SUBTITLE,
+/**
+ * Dibuja la tabla de equipos (entregados o recojo)
+ */
+private static async dibujarTablaEquipos(
+  page: PDFPage,
+  font: PDFFont,
+  fontBold: PDFFont,
+  titulo: string,
+  equipos: EquipoEntregado[] | EquipoRecojo[],
+  observaciones: string | undefined,
+  yPosition: number,
+  width: number,
+  incluirEstado: boolean
+): Promise<number> {
+  // Título de la tabla
+  page.drawText(titulo, {
+    x: 50,
+    y: yPosition,
+    size: this.FONT_SIZE.SUBTITLE,
+    font: fontBold,
+    color: this.COLORS.BLACK,
+  });
+
+  yPosition -= 15;
+
+  // Headers de la tabla
+  const headers = ['ITEM', 'EQUIPO', 'MARCA', 'MODELO', 'SERIE', 'INVENTARIO', 'HOSTNAME', 'PROC', 'DISCO', 'RAM'];
+  if (incluirEstado) {
+    headers.push('ESTADO');
+  }
+
+  // Anchos optimizados
+  const colWidths = incluirEstado 
+    ? [20, 38, 35, 60, 65, 45, 65, 38, 48, 32, 60]
+    : [25, 42, 38, 70, 75, 50, 70, 42, 52, 36];
+
+  const startX = 45;
+  const minRowHeight = 12;
+  const lineHeight = 8;
+  const fontSize = this.FONT_SIZE.SMALL - 2;
+  const cellPadding = 2;
+
+  // Dibujar headers
+  let xPos = startX;
+  headers.forEach((header, i) => {
+    page.drawRectangle({
+      x: xPos,
+      y: yPosition - minRowHeight,
+      width: colWidths[i],
+      height: minRowHeight,
+      color: rgb(0.68, 0.85, 0.9),
+      borderColor: this.COLORS.BLACK,
+      borderWidth: 0.5,
+    });
+
+    page.drawText(header, {
+      x: xPos + cellPadding,
+      y: yPosition - 9,
+      size: this.FONT_SIZE.SMALL - 1,
       font: fontBold,
       color: this.COLORS.BLACK,
     });
+    xPos += colWidths[i];
+  });
 
-    yPosition -= 15;
+  yPosition -= minRowHeight;
 
-    // Headers de la tabla
-    const headers = ['ITEM', 'EQUIPO', 'MARCA', 'MODELO', 'SERIE', 'INVENTARIO', 'HOSTNAME', 'PROC', 'DISCO', 'RAM'];
-    if (incluirEstado) {
-      headers.push('ESTADO');
+  // Función para dividir texto - PARTE PALABRAS LARGAS CARÁCTER POR CARÁCTER
+  const dividirTextoEnLineas = (texto: string, maxWidth: number): string[] => {
+    if (!texto || texto.trim() === '') return ['-'];
+    
+    const clean = texto.replace(/[\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!clean) return ['-'];
+
+    const lineas: string[] = [];
+    const palabras = clean.split(' ');
+    let lineaActual = '';
+
+    palabras.forEach((palabra) => {
+      // Si la palabra sola es más ancha que maxWidth, partirla carácter por carácter
+      if (font.widthOfTextAtSize(palabra, fontSize) > maxWidth) {
+        // Guardar línea actual si existe
+        if (lineaActual) {
+          lineas.push(lineaActual);
+          lineaActual = '';
+        }
+
+        // Partir la palabra larga carácter por carácter
+        let fragmento = '';
+        for (let i = 0; i < palabra.length; i++) {
+          const prueba = fragmento + palabra[i];
+          if (font.widthOfTextAtSize(prueba, fontSize) > maxWidth) {
+            if (fragmento) {
+              lineas.push(fragmento);
+            }
+            fragmento = palabra[i];
+          } else {
+            fragmento = prueba;
+          }
+        }
+        if (fragmento) {
+          lineaActual = fragmento;
+        }
+      } else {
+        // Palabra normal - intentar agregar a línea actual
+        const prueba = lineaActual + (lineaActual ? ' ' : '') + palabra;
+        if (font.widthOfTextAtSize(prueba, fontSize) > maxWidth && lineaActual) {
+          lineas.push(lineaActual);
+          lineaActual = palabra;
+        } else {
+          lineaActual = prueba;
+        }
+      }
+    });
+
+    if (lineaActual) {
+      lineas.push(lineaActual);
     }
 
-    // Anchos optimizados para mostrar todo el contenido
-    const colWidths = incluirEstado 
-      ? [20, 38, 35, 60, 65, 45, 65, 38, 48, 32, 60]  // Con estado
-      : [25, 42, 38, 70, 75, 50, 70, 42, 52, 36];     // Sin estado
+    return lineas.length > 0 ? lineas : ['-'];
+  };
 
-    const startX = 45;
-    const rowHeight = 12;
+  // Dibujar filas de equipos
+  equipos.forEach((equipo, index) => {
+    const row = [
+      (index + 1).toString(),
+      equipo.equipo || '-',
+      equipo.marca || '-',
+      equipo.modelo || '-',
+      equipo.serie || '-',
+      equipo.inventario || '-',
+      equipo.hostname || '-',
+      equipo.procesador || '-',
+      equipo.disco || '-',
+      equipo.ram || '-',
+    ];
 
-    // Dibujar headers con fondo azul claro y bordes
-    let xPos = startX;
-    headers.forEach((header, i) => {
-      // Dibujar fondo azul claro para header
+    if (incluirEstado && 'estado' in equipo) {
+      const equipoRecojo = equipo as EquipoRecojo;
+      row.push(equipoRecojo.estado || '-');
+    }
+
+    // Calcular líneas para cada celda
+    const cellLines: string[][] = [];
+    let maxLineas = 1;
+
+    row.forEach((cell, i) => {
+      const maxWidth = colWidths[i] - (cellPadding * 2);
+      const lineas = dividirTextoEnLineas(cell, maxWidth);
+      cellLines.push(lineas);
+      maxLineas = Math.max(maxLineas, lineas.length);
+    });
+
+    // Altura de la fila basada en cantidad de líneas
+    const rowHeight = Math.max(minRowHeight, maxLineas * lineHeight + 4);
+
+    // Dibujar cada celda
+    xPos = startX;
+    row.forEach((cell, i) => {
+      // Dibujar borde de celda
       page.drawRectangle({
         x: xPos,
         y: yPosition - rowHeight,
         width: colWidths[i],
         height: rowHeight,
-        color: rgb(0.68, 0.85, 0.9), // Azul claro
         borderColor: this.COLORS.BLACK,
         borderWidth: 0.5,
       });
 
-      // Dibujar texto del header
-      page.drawText(header, {
-        x: xPos + 2,
-        y: yPosition - 9,
-        size: this.FONT_SIZE.SMALL - 1,
-        font: fontBold,
-        color: this.COLORS.BLACK,
+      // Dibujar líneas de texto
+      const lineas = cellLines[i];
+      let yTexto = yPosition - 7;
+
+      lineas.forEach((linea) => {
+        if (yTexto > yPosition - rowHeight + 2) {
+          page.drawText(linea, {
+            x: xPos + cellPadding,
+            y: yTexto,
+            size: fontSize,
+            font: font,
+            color: this.COLORS.BLACK,
+          });
+          yTexto -= lineHeight;
+        }
       });
+
       xPos += colWidths[i];
     });
 
     yPosition -= rowHeight;
+  });
 
-    // Dibujar filas de equipos con bordes
-    equipos.forEach((equipo, index) => {
-      xPos = startX;
+  // Observaciones
+  if (observaciones) {
+    const observacionesLimpias = observaciones.replace(/[\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
 
-      const row = [
-        (index + 1).toString(),
-        equipo.equipo,
-        equipo.marca,
-        equipo.modelo,
-        equipo.serie,
-        equipo.inventario,
-        equipo.hostname || '-',
-        equipo.procesador || '-',
-        equipo.disco || '-',
-        equipo.ram || '-',
-      ];
-
-      if (incluirEstado && 'estado' in equipo) {
-        const equipoRecojo = equipo as EquipoRecojo;
-        row.push(equipoRecojo.estado);
-      }
-
-      row.forEach((cell, i) => {
-        // Dibujar borde de celda
-        page.drawRectangle({
-          x: xPos,
-          y: yPosition - rowHeight,
-          width: colWidths[i],
-          height: rowHeight,
-          borderColor: this.COLORS.BLACK,
-          borderWidth: 0.5,
-        });
-
-        // Ajustar texto si es muy largo para que quepa en la celda
-        let displayText = cell;
-        const fontSize = this.FONT_SIZE.SMALL - 2;
-        const maxWidth = colWidths[i] - 4;
-        let textWidth = font.widthOfTextAtSize(displayText, fontSize);
-        
-        // Si el texto es muy largo, reducir hasta que quepa
-        while (textWidth > maxWidth && displayText.length > 0) {
-          displayText = displayText.slice(0, -1);
-          textWidth = font.widthOfTextAtSize(displayText + '.', fontSize);
-        }
-        
-        if (displayText !== cell && displayText.length > 0) {
-          displayText = displayText + '.';
-        }
-
-        // Dibujar texto
-        page.drawText(displayText, {
-          x: xPos + 2,
-          y: yPosition - 9,
-          size: fontSize,
-          font: font,
-          color: this.COLORS.BLACK,
-        });
-        xPos += colWidths[i];
-      });
-
-      yPosition -= rowHeight;
-    });
-
-    // Observaciones con borde
-    if (observaciones) {
+    if (observacionesLimpias) {
       yPosition -= 8;
       page.drawText('OBSERVACIONES:', {
         x: 50,
@@ -489,7 +620,6 @@ export class ActaPDFService {
 
       yPosition -= 12;
       
-      // Recuadro para observaciones
       const obsWidth = width - 100;
       const obsHeight = 25;
       
@@ -502,8 +632,7 @@ export class ActaPDFService {
         borderWidth: 0.5,
       });
 
-      // Texto de observaciones
-      const words = observaciones.split(' ');
+      const words = observacionesLimpias.split(' ');
       let currentLine = '';
       let lineY = yPosition - 10;
       const maxLineWidth = obsWidth - 10;
@@ -527,7 +656,6 @@ export class ActaPDFService {
         }
       });
 
-      // Dibujar última línea
       if (currentLine) {
         page.drawText(currentLine, {
           x: 55,
@@ -540,17 +668,18 @@ export class ActaPDFService {
 
       yPosition -= obsHeight;
     }
-
-    // Línea separadora
-    page.drawLine({
-      start: { x: 50, y: yPosition - 10 },
-      end: { x: width - 50, y: yPosition - 10 },
-      thickness: 1,
-      color: this.COLORS.BLACK,
-    });
-
-    return yPosition - 25;
   }
+
+  // Línea separadora
+  page.drawLine({
+    start: { x: 50, y: yPosition - 10 },
+    end: { x: width - 50, y: yPosition - 10 },
+    thickness: 1,
+    color: this.COLORS.BLACK,
+  });
+
+  return yPosition - 25;
+}
 
   /**
    * Dibuja las condiciones y responsabilidades
@@ -722,7 +851,7 @@ export class ActaPDFService {
       borderWidth: 1,
     });
 
-    page.drawText('Usuario  /  DNI', {
+    page.drawText('Nombre  /  DNI', {
       x: col2X + boxWidth / 2 - 38,
       y: yPosition - 14,
       size: this.FONT_SIZE.NORMAL,
