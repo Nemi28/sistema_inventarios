@@ -44,7 +44,7 @@ export interface GenerarActaResponse {
   mensaje: string;
 }
 
-export const AREAS_OPTIONS = ['CAJA', 'VENTAS', 'ALMACEN'] as const;
+export const AREAS_OPTIONS = ['CAJA', 'VENTAS', 'OL','CAJA+ASESOR','CAJA+OL','OL+ASESOR','CAJA+OL+ASESOR'] as const;
 
 export const CARGOS_OPTIONS = [
   'CONTROLLER',

@@ -142,6 +142,8 @@ const ActaFormModal: React.FC<ActaFormModalProps> = ({ open, onClose }) => {
   const mostrarRecojo = tipoAtencion === 'REEMPLAZO' || tipoAtencion === 'UPGRADE';
 
   const onSubmit = (data: GenerarActaFormData) => {
+    console.log('📤 DATOS DEL FORMULARIO:', data); // ← AGREGAR ESTO
+  console.log('📤 EQUIPOS ENTREGADOS:', data.equipos_entregados);
     mutation.mutate(data, {
       onSuccess: () => {
         reset();

@@ -4,14 +4,6 @@ import {
   useReactTable,
   ColumnDef,
 } from '@tanstack/react-table';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 
 interface DataTableProps<TData> {
   data: TData[];
@@ -20,7 +12,7 @@ interface DataTableProps<TData> {
   onRowClick?: (row: TData) => void;
   onEdit?: (row: TData) => void;
   onDelete?: (row: TData) => void;
-  onViewEquipos?: (row: TData) => void; // ← NUEVA LÍNEA
+  onViewEquipos?: (row: TData) => void;
 }
 
 export function DataTable<TData>({
@@ -30,7 +22,7 @@ export function DataTable<TData>({
   onRowClick,
   onEdit,
   onDelete,
-  onViewEquipos, // ← NUEVA LÍNEA
+  onViewEquipos,
 }: DataTableProps<TData>) {
   const table = useReactTable({
     data,
@@ -39,89 +31,89 @@ export function DataTable<TData>({
     meta: {
       onEdit: onEdit,
       onDelete: onDelete,
-      onViewEquipos: onViewEquipos, // ← NUEVA LÍNEA
+      onViewEquipos: onViewEquipos,
     },
   });
 
   if (isLoading) {
     return (
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
+      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div className="h-96 flex items-center justify-center">
+          <div className="text-gray-500">Cargando...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="h-full overflow-auto">
+        <table className="w-full border-collapse">
+          {/* HEADER FIJO */}
+          <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <tr key={headerGroup.id} className="border-b-2 border-gray-200">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <th
+                    key={header.id}
+                    className="font-semibold text-gray-700 text-xs py-3 px-3 text-left whitespace-nowrap bg-gray-50"
+                    style={{ 
+                      minWidth: header.getSize() !== 150 ? header.getSize() : 'auto',
+                      width: header.getSize() !== 150 ? header.getSize() : 'auto' 
+                    }}
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
                           header.getContext()
                         )}
-                  </TableHead>
+                  </th>
                 ))}
-              </TableRow>
+              </tr>
             ))}
-          </TableHeader>
-          <TableBody>
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center"
-              >
-                Cargando...
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-    );
-  }
+          </thead>
 
-  return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() && 'selected'}
-                onClick={() => onRowClick?.(row.original)}
-                className={onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                No hay resultados.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+          {/* BODY */}
+          <tbody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row, index) => (
+                <tr
+                  key={row.id}
+                  onClick={() => onRowClick?.(row.original)}
+                  className={`
+                    ${onRowClick ? 'cursor-pointer' : ''}
+                    ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
+                    hover:bg-blue-50 transition-colors border-b border-gray-100
+                  `}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      key={cell.id}
+                      className="py-2.5 px-3 text-sm"
+                      style={{ 
+                        minWidth: cell.column.getSize() !== 150 ? cell.column.getSize() : 'auto',
+                        width: cell.column.getSize() !== 150 ? cell.column.getSize() : 'auto'
+                      }}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="h-32 text-center text-gray-500"
+                >
+                  No hay resultados.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
