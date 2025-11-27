@@ -7,15 +7,16 @@ export interface ListarEquiposParams {
   limit?: number;
   activo?: boolean;
   modelo_id?: number;
-  categoria_id?: number;  // ← AGREGAR
-  subcategoria_id?: number;  // ← AGREGAR
-  marca_id?: number;  // ← AGREGAR
+  categoria_id?: number;
+  subcategoria_id?: number;
+  marca_id?: number;
   estado_actual?: string;
   ubicacion_actual?: string;
   tienda_id?: number;
   tipo_propiedad?: string;
   garantia?: boolean;
   es_accesorio?: boolean;
+  busqueda?: string; // ← NUEVO: Parámetro de búsqueda
   ordenar_por?: string;
   orden?: 'ASC' | 'DESC';
 }
@@ -89,7 +90,6 @@ export const obtenerEquipos = async (): Promise<Equipo[]> => {
   });
   return data.data;
 };
-
 
 /**
  * Obtener equipos en ALMACÉN

@@ -52,15 +52,16 @@ export interface EquipoCompleto extends Equipo {
 export interface FiltrosEquipo extends PaginacionParams {
   activo?: boolean;
   modelo_id?: number;
-  categoria_id?: number;  // ← AGREGAR
-  subcategoria_id?: number;  // ← AGREGAR
-  marca_id?: number;  // ← AGREGAR
+  categoria_id?: number;
+  subcategoria_id?: number;
+  marca_id?: number;
   estado_actual?: string;
   ubicacion_actual?: string;
   tienda_id?: number;
   tipo_propiedad?: string;
   garantia?: boolean;
   es_accesorio?: boolean;
+  busqueda?: string; // ← NUEVO: Parámetro de búsqueda
   ordenar_por?: string;
   orden?: string;
 }
@@ -485,18 +486,33 @@ export const eliminarEquipo = async (id: number): Promise<boolean> => {
 };
 
 /**
- * Listar equipos en ALMACÉN con última ubicación
+ * Listar equipos en ALMACÉN con última ubicación y búsqueda
  */
 export const listarEquiposAlmacen = async (filtros: FiltrosEquipo = {}) => {
   const { page, limit, offset } = calcularPaginacion(filtros);
   const { campo, direccion } = validarOrdenamiento(
     filtros.ordenar_por,
     filtros.orden,
-    ['e.numero_serie', 'e.inv_entel', 'e.estado_actual', 'e.fecha_creacion']
+    ['e.numero_serie', 'e.inv_entel', 'e.estado_actual', 'e.fecha_creacion', 'm.nombre', 'ma.nombre']
   );
 
   const condiciones: string[] = ['e.ubicacion_actual = ?', 'e.activo = true'];
   const valores: any[] = ['ALMACEN'];
+
+  // Búsqueda global
+  if (filtros.busqueda && filtros.busqueda.trim() !== '') {
+    const termino = `%${filtros.busqueda.trim()}%`;
+    condiciones.push(`(
+      e.numero_serie LIKE ? OR 
+      e.inv_entel LIKE ? OR 
+      m.nombre LIKE ? OR 
+      ma.nombre LIKE ? OR
+      c.nombre LIKE ? OR
+      sc.nombre LIKE ? OR
+      e.hostname LIKE ?
+    )`);
+    valores.push(termino, termino, termino, termino, termino, termino, termino);
+  }
 
   // Filtros en cascada
   if (filtros.categoria_id) {
@@ -584,18 +600,36 @@ export const listarEquiposAlmacen = async (filtros: FiltrosEquipo = {}) => {
 };
 
 /**
- * Listar equipos en TIENDAS con datos de tienda
+ * Listar equipos en TIENDAS con datos de tienda y búsqueda
  */
 export const listarEquiposTiendas = async (filtros: FiltrosEquipo = {}) => {
   const { page, limit, offset } = calcularPaginacion(filtros);
   const { campo, direccion } = validarOrdenamiento(
     filtros.ordenar_por,
     filtros.orden,
-    ['e.numero_serie', 'e.inv_entel', 't.nombre_tienda', 'e.fecha_creacion']
+    ['e.numero_serie', 'e.inv_entel', 't.nombre_tienda', 'e.fecha_creacion', 'm.nombre', 'ma.nombre']
   );
 
   const condiciones: string[] = ['e.ubicacion_actual = ?', 'e.activo = true'];
   const valores: any[] = ['TIENDA'];
+
+  // Búsqueda global
+  if (filtros.busqueda && filtros.busqueda.trim() !== '') {
+    const termino = `%${filtros.busqueda.trim()}%`;
+    condiciones.push(`(
+      e.numero_serie LIKE ? OR 
+      e.inv_entel LIKE ? OR 
+      m.nombre LIKE ? OR 
+      ma.nombre LIKE ? OR
+      c.nombre LIKE ? OR
+      sc.nombre LIKE ? OR
+      t.nombre_tienda LIKE ? OR
+      t.pdv LIKE ? OR
+      e.hostname LIKE ? OR
+      s.razon_social LIKE ?
+    )`);
+    valores.push(termino, termino, termino, termino, termino, termino, termino, termino, termino, termino);
+  }
 
   // Filtros en cascada
   if (filtros.categoria_id) {
@@ -639,6 +673,7 @@ export const listarEquiposTiendas = async (filtros: FiltrosEquipo = {}) => {
     INNER JOIN categorias c ON sc.categoria_id = c.id
     INNER JOIN marcas ma ON m.marca_id = ma.id
     LEFT JOIN tienda t ON e.tienda_id = t.id
+    LEFT JOIN socio s ON t.socio_id = s.id
     WHERE ${whereClause}
   `;
 
@@ -680,18 +715,23 @@ export const listarEquiposTiendas = async (filtros: FiltrosEquipo = {}) => {
 };
 
 /**
- * Listar equipos asignados a PERSONAS
+ * Listar equipos asignados a PERSONAS con búsqueda
  */
 export const listarEquiposPersonas = async (filtros: FiltrosEquipo = {}) => {
   const { page, limit, offset } = calcularPaginacion(filtros);
   const { campo, direccion } = validarOrdenamiento(
     filtros.ordenar_por,
     filtros.orden,
-    ['e.numero_serie', 'e.inv_entel', 'mov_actual.fecha_salida', 'e.fecha_creacion']
+    ['e.numero_serie', 'e.inv_entel', 'mov_actual.fecha_salida', 'e.fecha_creacion', 'm.nombre', 'ma.nombre']
   );
 
   const condiciones: string[] = ['e.ubicacion_actual = ?', 'e.activo = true'];
   const valores: any[] = ['PERSONA'];
+
+  // Búsqueda global - se aplicará después del JOIN con movimientos
+  const busquedaTermino = filtros.busqueda && filtros.busqueda.trim() !== '' 
+    ? `%${filtros.busqueda.trim()}%` 
+    : null;
 
   // Filtros en cascada
   if (filtros.categoria_id) {
@@ -719,6 +759,24 @@ export const listarEquiposPersonas = async (filtros: FiltrosEquipo = {}) => {
     valores.push(filtros.estado_actual);
   }
 
+  // Agregar condición de búsqueda
+  if (busquedaTermino) {
+    condiciones.push(`(
+      e.numero_serie LIKE ? OR 
+      e.inv_entel LIKE ? OR 
+      m.nombre LIKE ? OR 
+      ma.nombre LIKE ? OR
+      c.nombre LIKE ? OR
+      sc.nombre LIKE ? OR
+      mov_actual.persona_destino LIKE ? OR
+      mov_actual.codigo_acta LIKE ?
+    )`);
+    valores.push(
+      busquedaTermino, busquedaTermino, busquedaTermino, busquedaTermino,
+      busquedaTermino, busquedaTermino, busquedaTermino, busquedaTermino
+    );
+  }
+
   const whereClause = condiciones.join(' AND ');
 
   // Query para contar
@@ -729,6 +787,13 @@ export const listarEquiposPersonas = async (filtros: FiltrosEquipo = {}) => {
     INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
     INNER JOIN categorias c ON sc.categoria_id = c.id
     INNER JOIN marcas ma ON m.marca_id = ma.id
+    LEFT JOIN equipos_movimientos mov_actual 
+      ON mov_actual.equipo_id = e.id 
+      AND mov_actual.id = (
+        SELECT MAX(id) FROM equipos_movimientos 
+        WHERE equipo_id = e.id 
+        AND ubicacion_destino = 'PERSONA'
+      )
     WHERE ${whereClause}
   `;
 

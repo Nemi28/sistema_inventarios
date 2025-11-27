@@ -32,7 +32,6 @@ export const crear = async (req: Request, res: Response) => {
       });
     }
 
-    // ✅ CAMBIAR DE req.usuario A req.user
     const usuario = (req as any).user;
     
     if (!usuario || !usuario.id) {
@@ -42,7 +41,6 @@ export const crear = async (req: Request, res: Response) => {
       });
     }
 
-    // Agregar usuario_id del token
     datosMovimiento.usuario_id = usuario.id;
 
     const resultado = await MovimientoModel.crearMovimientos(equipos_ids, datosMovimiento);
@@ -81,6 +79,7 @@ export const listar = async (req: Request, res: Response) => {
     const {
       page,
       limit,
+      busqueda, // ← NUEVO
       equipo_id,
       tipo_movimiento,
       estado_movimiento,
@@ -98,6 +97,7 @@ export const listar = async (req: Request, res: Response) => {
     const filtros: MovimientoModel.FiltrosMovimiento = {
       page: page ? parseInt(page as string) : undefined,
       limit: limit ? parseInt(limit as string) : undefined,
+      busqueda: busqueda as string, // ← NUEVO
       equipo_id: equipo_id ? parseInt(equipo_id as string) : undefined,
       tipo_movimiento: tipo_movimiento as string,
       estado_movimiento: estado_movimiento as string,

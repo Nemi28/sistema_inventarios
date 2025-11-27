@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Equipo } from '../types';
 
 export const columnsTiendas: ColumnDef<Equipo>[] = [
-  // ✅ NUEVA COLUMNA: Checkbox
+  // Checkbox
   {
     id: 'select',
     header: ({ table }) => (
@@ -169,7 +169,11 @@ export const columnsTiendas: ColumnDef<Equipo>[] = [
     size: 100,
     cell: ({ row, table }) => {
       const item = row.original;
-      const meta = table.options.meta as any;
+      const meta = table.options.meta as {
+        onView?: (equipo: Equipo) => void;
+        onRetornarAlmacen?: (equipo: Equipo) => void;
+        onViewHistory?: (equipo: Equipo) => void;
+      };
 
       return (
         <div className="flex items-center gap-1">
@@ -182,24 +186,26 @@ export const columnsTiendas: ColumnDef<Equipo>[] = [
                 meta.onView(item);
               }
             }}
-            className="h-6 w-6 p-0 hover:bg-purple-50 hover:text-purple-600"
+            className="h-7 w-7 p-0 hover:bg-purple-50 hover:text-purple-600"
             title="Ver Detalle"
             type="button"
           >
-            <Eye className="h-3 w-3" />
+            <Eye className="h-3.5 w-3.5" />
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={(e) => {
               e.stopPropagation();
-              // TODO: Retornar a almacén
+              if (meta?.onRetornarAlmacen) {
+                meta.onRetornarAlmacen(item);
+              }
             }}
-            className="h-6 w-6 p-0 hover:bg-orange-50 hover:text-orange-600"
+            className="h-7 w-7 p-0 hover:bg-orange-50 hover:text-orange-600"
             title="Retornar a Almacén"
             type="button"
           >
-            <ArrowLeft className="h-3 w-3" />
+            <ArrowLeft className="h-3.5 w-3.5" />
           </Button>
           <Button
             size="sm"
@@ -210,11 +216,11 @@ export const columnsTiendas: ColumnDef<Equipo>[] = [
                 meta.onViewHistory(item);
               }
             }}
-            className="h-6 w-6 p-0 hover:bg-gray-50 hover:text-gray-600"
+            className="h-7 w-7 p-0 hover:bg-gray-50 hover:text-gray-600"
             title="Historial"
             type="button"
           >
-            <History className="h-3 w-3" />
+            <History className="h-3.5 w-3.5" />
           </Button>
         </div>
       );

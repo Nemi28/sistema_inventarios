@@ -9,10 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { EquipoFormModal } from './EquipoFormModal';
 import { EquipoFiltersCascade } from './EquipoFiltersCascade';
 import { MovimientoModal } from '@/features/movimientos/components/MovimientoModal';
+import { HistorialModal } from '@/features/movimientos/components/HistorialModal';
+import { EquipoDetalleModal } from './EquipoDetalleModal';
 import { useEquiposAlmacen } from '../hooks/useEquiposAlmacen';
 import { useDeleteEquipo } from '../hooks/useDeleteEquipo';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useDebounce } from '@/hooks/useDebounce';
 import { columnsAlmacen } from './columnsAlmacen';
 import { Equipo } from '../types';
 import { RowSelectionState } from '@tanstack/react-table';
@@ -23,15 +26,24 @@ export const AlmacenPage = () => {
   const [editingEquipo, setEditingEquipo] = useState<Equipo | null>(null);
   const [deletingItem, setDeletingItem] = useState<Equipo | null>(null);
   
+  // Debounce para búsqueda (espera 400ms después de dejar de escribir)
+  const debouncedSearch = useDebounce(searchTerm, 400);
+  
   // Filtros en cascada
   const [categoriaId, setCategoriaId] = useState<number | undefined>();
   const [subcategoriaId, setSubcategoriaId] = useState<number | undefined>();
   const [marcaId, setMarcaId] = useState<number | undefined>();
   const [modeloId, setModeloId] = useState<number | undefined>();
 
-  // ✅ NUEVO: Selección múltiple PERSISTENTE por ID
+  // Selección múltiple PERSISTENTE por ID
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [selectedEquiposIds, setSelectedEquiposIds] = useState<Set<number>>(new Set());
+
+  // Modal de historial
+  const [equipoParaHistorial, setEquipoParaHistorial] = useState<Equipo | null>(null);
+
+  // Modal de detalle
+  const [equipoParaDetalle, setEquipoParaDetalle] = useState<Equipo | null>(null);
 
   const { isOpen, open, close } = useDisclosure();
   const { 
@@ -51,15 +63,17 @@ export const AlmacenPage = () => {
     subcategoria_id: subcategoriaId,
     marca_id: marcaId,
     modelo_id: modeloId,
+    busqueda: debouncedSearch || undefined, // ← Conectar búsqueda
     ordenar_por: 'e.fecha_creacion',
     orden: 'DESC',
   });
 
+  // Reset página cuando cambian filtros o búsqueda
   useEffect(() => {
     setPage(1);
-  }, [categoriaId, subcategoriaId, marcaId, modeloId]);
+  }, [categoriaId, subcategoriaId, marcaId, modeloId, debouncedSearch]);
 
-  // ✅ NUEVO: Sincronizar rowSelection con selectedEquiposIds
+  // Sincronizar rowSelection con selectedEquiposIds
   useEffect(() => {
     if (data?.data) {
       const newRowSelection: RowSelectionState = {};
@@ -84,6 +98,14 @@ export const AlmacenPage = () => {
 
   const handleDelete = (equipo: Equipo) => {
     setDeletingItem(equipo);
+  };
+
+  const handleView = (equipo: Equipo) => {
+    setEquipoParaDetalle(equipo);
+  };
+
+  const handleViewHistory = (equipo: Equipo) => {
+    setEquipoParaHistorial(equipo);
   };
 
   const confirmDelete = () => {
@@ -114,7 +136,7 @@ export const AlmacenPage = () => {
     setPage(1);
   };
 
-  // ✅ NUEVO: Manejar cambios en la selección
+  // Manejar cambios en la selección
   const handleRowSelectionChange = (updaterOrValue: any) => {
     setRowSelection((old) => {
       const newSelection = typeof updaterOrValue === 'function' 
@@ -139,10 +161,8 @@ export const AlmacenPage = () => {
     });
   };
 
-  // ✅ NUEVO: Obtener equipos seleccionados de TODAS las páginas
+  // Obtener equipos seleccionados de TODAS las páginas
   const selectedEquipos = useMemo(() => {
-    // Esta función se ejecutará cuando abramos el modal
-    // Por ahora retornamos los de la página actual
     return (data?.data || []).filter((equipo) => selectedEquiposIds.has(equipo.id));
   }, [data, selectedEquiposIds]);
 
@@ -151,7 +171,7 @@ export const AlmacenPage = () => {
   const handleMovimientoClose = () => {
     closeMovimiento();
     setRowSelection({});
-    setSelectedEquiposIds(new Set()); // ✅ Limpiar Set
+    setSelectedEquiposIds(new Set());
     refetch();
   };
 
@@ -226,10 +246,12 @@ export const AlmacenPage = () => {
         enableRowSelection={true}
         rowSelection={rowSelection}
         onRowSelectionChange={handleRowSelectionChange}
-        getRowId={(row) => row.id.toString()} // ✅ CRÍTICO: Usar ID real
+        getRowId={(row) => row.id.toString()}
         meta={{
+          onView: handleView,
           onEdit: handleEdit,
           onDelete: handleDelete,
+          onViewHistory: handleViewHistory,
         }}
       />
 
@@ -271,6 +293,24 @@ export const AlmacenPage = () => {
         onClose={handleMovimientoClose}
         equipos={selectedEquipos}
         ubicacionActual="ALMACEN"
+      />
+
+      {/* Modal de Historial */}
+      <HistorialModal
+        open={!!equipoParaHistorial}
+        onClose={() => setEquipoParaHistorial(null)}
+        equipo={equipoParaHistorial}
+      />
+
+      {/* Modal de Detalle */}
+      <EquipoDetalleModal
+        open={!!equipoParaDetalle}
+        onClose={() => setEquipoParaDetalle(null)}
+        equipo={equipoParaDetalle}
+        onViewHistory={(equipo) => {
+          setEquipoParaDetalle(null);
+          setEquipoParaHistorial(equipo);
+        }}
       />
 
       {/* Modal de Confirmación */}
