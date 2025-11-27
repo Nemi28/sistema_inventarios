@@ -19,11 +19,14 @@ import { GuiasPage } from './features/guias/components/GuiasPage';
 import { CategoriasPage } from './features/categorias/components/CategoriasPage';
 import { EquiposPage } from './features/equipos/components/EquiposPage';
 import { ActasPage } from './features/actas/components/ActasPage';
+import { MovimientosPage } from './features/movimientos/components/MovimientosPage';
 import { CategoriaDetailView } from './features/categorias/components/CategoriaDetailView';
 import { OrdenesCompraPage } from './features/ordenes_compra/components/OrdenesCompraPage';
 
-
-
+// ← NUEVAS IMPORTACIONES
+import { AlmacenPage } from './features/equipos/components/AlmacenPage';
+import { TiendasInventarioPage } from './features/equipos/components/TiendasInventarioPage';
+import { PersonasInventarioPage } from './features/equipos/components/PersonasInventarioPage';
 
 function App() {
   return (
@@ -80,6 +83,12 @@ function App() {
             <Route path="/guias" element={<GuiasPage />} />
             <Route path="/categorias" element={<CategoriasPage />} />
             <Route path="/equipos" element={<EquiposPage />} />
+            <Route path="/movimientos" element={<MovimientosPage />} />
+            {/* ← NUEVAS RUTAS DE INVENTARIO POR UBICACIÓN */}
+            <Route path="/almacen" element={<AlmacenPage />} />
+            <Route path="/tiendas-inventario" element={<TiendasInventarioPage />} />
+            <Route path="/personas-inventario" element={<PersonasInventarioPage />} />
+            
             <Route path="/ordenes-compra" element={<OrdenesCompraPage />} />
             <Route path="/categorias/:id/equipos" element={<CategoriaDetailView />} />
             <Route path="/actas" element={<ActasPage />} />

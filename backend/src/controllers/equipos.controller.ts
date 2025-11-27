@@ -280,3 +280,149 @@ export const eliminar = async (req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * Listar equipos en ALMACÉN
+ * GET /api/equipos/almacen
+ * Roles: todos
+ */
+export const listarAlmacen = async (req: Request, res: Response) => {
+  try {
+    const {
+      page,
+      limit,
+      categoria_id,  // ← AGREGAR
+      subcategoria_id,  // ← AGREGAR
+      marca_id,  // ← AGREGAR
+      modelo_id,
+      estado_actual,
+      ordenar_por,
+      orden,
+    } = req.query;
+
+    const filtros: EquipoModel.FiltrosEquipo = {
+      page: page ? parseInt(page as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined,
+      categoria_id: categoria_id ? parseInt(categoria_id as string) : undefined,  // ← AGREGAR
+      subcategoria_id: subcategoria_id ? parseInt(subcategoria_id as string) : undefined,  // ← AGREGAR
+      marca_id: marca_id ? parseInt(marca_id as string) : undefined,  // ← AGREGAR
+      modelo_id: modelo_id ? parseInt(modelo_id as string) : undefined,
+      estado_actual: estado_actual as string,
+      ordenar_por: ordenar_por as string,
+      orden: orden as string,
+    };
+
+    const resultado = await EquipoModel.listarEquiposAlmacen(filtros);
+
+    res.status(200).json({
+      success: true,
+      data: resultado.data,
+      paginacion: resultado.paginacion,
+    });
+  } catch (error: any) {
+    console.error('Error al listar equipos de almacén:', error);
+    res.status(500).json({
+      success: false,
+      mensaje: 'Error al listar equipos de almacén',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Listar equipos en TIENDAS
+ * GET /api/equipos/tiendas
+ * Roles: todos
+ */
+export const listarTiendas = async (req: Request, res: Response) => {
+  try {
+    const {
+      page,
+      limit,
+      categoria_id,  // ← AGREGAR
+      subcategoria_id,  // ← AGREGAR
+      marca_id,  // ← AGREGAR
+      modelo_id,
+      tienda_id,
+      estado_actual,
+      ordenar_por,
+      orden,
+    } = req.query;
+
+    const filtros: EquipoModel.FiltrosEquipo = {
+      page: page ? parseInt(page as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined,
+      categoria_id: categoria_id ? parseInt(categoria_id as string) : undefined,  // ← AGREGAR
+      subcategoria_id: subcategoria_id ? parseInt(subcategoria_id as string) : undefined,  // ← AGREGAR
+      marca_id: marca_id ? parseInt(marca_id as string) : undefined,  // ← AGREGAR
+      modelo_id: modelo_id ? parseInt(modelo_id as string) : undefined,
+      tienda_id: tienda_id ? parseInt(tienda_id as string) : undefined,
+      estado_actual: estado_actual as string,
+      ordenar_por: ordenar_por as string,
+      orden: orden as string,
+    };
+
+    const resultado = await EquipoModel.listarEquiposTiendas(filtros);
+
+    res.status(200).json({
+      success: true,
+      data: resultado.data,
+      paginacion: resultado.paginacion,
+    });
+  } catch (error: any) {
+    console.error('Error al listar equipos en tiendas:', error);
+    res.status(500).json({
+      success: false,
+      mensaje: 'Error al listar equipos en tiendas',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Listar equipos asignados a PERSONAS
+ * GET /api/equipos/personas
+ * Roles: todos
+ */
+export const listarPersonas = async (req: Request, res: Response) => {
+  try {
+    const {
+      page,
+      limit,
+      categoria_id,  // ← AGREGAR
+      subcategoria_id,  // ← AGREGAR
+      marca_id,  // ← AGREGAR
+      modelo_id,
+      estado_actual,
+      ordenar_por,
+      orden,
+    } = req.query;
+
+    const filtros: EquipoModel.FiltrosEquipo = {
+      page: page ? parseInt(page as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined,
+      categoria_id: categoria_id ? parseInt(categoria_id as string) : undefined,  // ← AGREGAR
+      subcategoria_id: subcategoria_id ? parseInt(subcategoria_id as string) : undefined,  // ← AGREGAR
+      marca_id: marca_id ? parseInt(marca_id as string) : undefined,  // ← AGREGAR
+      modelo_id: modelo_id ? parseInt(modelo_id as string) : undefined,
+      estado_actual: estado_actual as string,
+      ordenar_por: ordenar_por as string,
+      orden: orden as string,
+    };
+
+    const resultado = await EquipoModel.listarEquiposPersonas(filtros);
+
+    res.status(200).json({
+      success: true,
+      data: resultado.data,
+      paginacion: resultado.paginacion,
+    });
+  } catch (error: any) {
+    console.error('Error al listar equipos asignados a personas:', error);
+    res.status(500).json({
+      success: false,
+      mensaje: 'Error al listar equipos asignados a personas',
+      error: error.message,
+    });
+  }
+};

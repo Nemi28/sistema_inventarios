@@ -3,6 +3,8 @@ import {
   getCoreRowModel,
   useReactTable,
   ColumnDef,
+  RowSelectionState,
+  OnChangeFn,
 } from '@tanstack/react-table';
 
 interface DataTableProps<TData> {
@@ -13,6 +15,11 @@ interface DataTableProps<TData> {
   onEdit?: (row: TData) => void;
   onDelete?: (row: TData) => void;
   onViewEquipos?: (row: TData) => void;
+  meta?: Record<string, any>;
+  enableRowSelection?: boolean;
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
+  getRowId?: (row: TData) => string; // ← NUEVO
 }
 
 export function DataTable<TData>({
@@ -23,15 +30,27 @@ export function DataTable<TData>({
   onEdit,
   onDelete,
   onViewEquipos,
+  meta: customMeta,
+  enableRowSelection = false,
+  rowSelection = {},
+  onRowSelectionChange,
+  getRowId, // ← NUEVO
 }: DataTableProps<TData>) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    enableRowSelection,
+    getRowId, // ← NUEVO: Usar IDs reales
+    state: {
+      rowSelection,
+    },
+    onRowSelectionChange,
     meta: {
       onEdit: onEdit,
       onDelete: onDelete,
       onViewEquipos: onViewEquipos,
+      ...customMeta,
     },
   });
 

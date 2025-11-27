@@ -7,6 +7,9 @@ export interface ListarEquiposParams {
   limit?: number;
   activo?: boolean;
   modelo_id?: number;
+  categoria_id?: number;  // ← AGREGAR
+  subcategoria_id?: number;  // ← AGREGAR
+  marca_id?: number;  // ← AGREGAR
   estado_actual?: string;
   ubicacion_actual?: string;
   tienda_id?: number;
@@ -85,4 +88,41 @@ export const obtenerEquipos = async (): Promise<Equipo[]> => {
     params: { limit: 1000 }
   });
   return data.data;
+};
+
+
+/**
+ * Obtener equipos en ALMACÉN
+ */
+export const listarEquiposAlmacen = async (
+  params: ListarEquiposParams = {}
+): Promise<PaginatedResponse<Equipo>> => {
+  const { data } = await api.get<PaginatedResponse<Equipo>>('/api/equipos/almacen', { 
+    params 
+  });
+  return data;
+};
+
+/**
+ * Obtener equipos en TIENDAS
+ */
+export const listarEquiposTiendas = async (
+  params: ListarEquiposParams = {}
+): Promise<PaginatedResponse<Equipo>> => {
+  const { data } = await api.get<PaginatedResponse<Equipo>>('/api/equipos/tiendas', { 
+    params 
+  });
+  return data;
+};
+
+/**
+ * Obtener equipos asignados a PERSONAS
+ */
+export const listarEquiposPersonas = async (
+  params: ListarEquiposParams = {}
+): Promise<PaginatedResponse<Equipo>> => {
+  const { data } = await api.get<PaginatedResponse<Equipo>>('/api/equipos/personas', { 
+    params 
+  });
+  return data;
 };
