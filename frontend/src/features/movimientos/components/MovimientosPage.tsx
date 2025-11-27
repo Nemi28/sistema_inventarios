@@ -6,7 +6,9 @@ import { Pagination } from '@/components/common/Pagination';
 import { useMovimientos } from '../hooks/useMovimientos';
 import { columnsMovimientos } from './columns';
 import { MovimientoCard } from './MovimientoCard';
+import { ActualizarEstadoModal } from './ActualizarEstadoModal';
 import { Movimiento } from '../types';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   Dialog,
   DialogContent,
@@ -17,17 +19,40 @@ import {
 export const MovimientosPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+  
+  // Debounce para búsqueda
+  const debouncedSearch = useDebounce(searchTerm, 400);
+  
+  // Modal de detalle
   const [movimientoSeleccionado, setMovimientoSeleccionado] = useState<Movimiento | null>(null);
+  
+  // Modal de confirmar recepción
+  const [movimientoParaConfirmar, setMovimientoParaConfirmar] = useState<Movimiento | null>(null);
 
   const { data, isLoading } = useMovimientos({
     page,
     limit: 20,
+    busqueda: debouncedSearch || undefined, // ← Conectar búsqueda
     ordenar_por: 'em.fecha_salida',
     orden: 'DESC',
   });
 
+  // Reset página cuando cambia la búsqueda
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    if (value !== searchTerm) {
+      setPage(1);
+    }
+  };
+
+  // Handler para ver detalle
   const handleView = (movimiento: Movimiento) => {
     setMovimientoSeleccionado(movimiento);
+  };
+
+  // Handler para confirmar recepción
+  const handleConfirmarRecepcion = (movimiento: Movimiento) => {
+    setMovimientoParaConfirmar(movimiento);
   };
 
   return (
@@ -51,9 +76,9 @@ export const MovimientosPage = () => {
       <div className="flex-1">
         <SearchBar
           value={searchTerm}
-          onChange={setSearchTerm}
-          placeholder="Buscar por equipo, acta, ticket..."
-          isLoading={false}
+          onChange={handleSearchChange}
+          placeholder="Buscar por equipo, serie, acta, ticket, tienda, persona..."
+          isLoading={isLoading && !!debouncedSearch}
         />
       </div>
 
@@ -63,7 +88,8 @@ export const MovimientosPage = () => {
         columns={columnsMovimientos}
         isLoading={isLoading}
         meta={{
-          onView: handleView,  // ← CORRECTO: Dentro de meta
+          onView: handleView,
+          onConfirmarRecepcion: handleConfirmarRecepcion,
         }}
       />
 
@@ -90,6 +116,13 @@ export const MovimientosPage = () => {
           {movimientoSeleccionado && <MovimientoCard movimiento={movimientoSeleccionado} />}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Confirmar Recepción */}
+      <ActualizarEstadoModal
+        open={!!movimientoParaConfirmar}
+        onClose={() => setMovimientoParaConfirmar(null)}
+        movimiento={movimientoParaConfirmar}
+      />
     </div>
   );
 };

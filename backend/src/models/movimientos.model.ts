@@ -53,6 +53,7 @@ export interface MovimientoCompleto extends Movimiento {
 }
 
 export interface FiltrosMovimiento extends PaginacionParams {
+  busqueda?: string; // ← NUEVO
   equipo_id?: number;
   tipo_movimiento?: string;
   estado_movimiento?: string;
@@ -145,18 +146,38 @@ export const crearMovimientos = async (
 };
 
 /**
- * Listar movimientos con filtros y paginación
+ * Listar movimientos con filtros, paginación y búsqueda
  */
 export const listarMovimientos = async (filtros: FiltrosMovimiento = {}) => {
   const { page, limit, offset } = calcularPaginacion(filtros);
   const { campo, direccion } = validarOrdenamiento(
     filtros.ordenar_por,
     filtros.orden,
-    ['em.fecha_salida', 'em.fecha_creacion', 'em.tipo_movimiento']
+    ['em.fecha_salida', 'em.fecha_creacion', 'em.tipo_movimiento', 'e.numero_serie', 'e.inv_entel']
   );
 
   const condiciones: string[] = ['em.activo = true'];
   const valores: any[] = [];
+
+  // Búsqueda global
+  if (filtros.busqueda && filtros.busqueda.trim() !== '') {
+    const termino = `%${filtros.busqueda.trim()}%`;
+    condiciones.push(`(
+      e.numero_serie LIKE ? OR 
+      e.inv_entel LIKE ? OR 
+      m.nombre LIKE ? OR 
+      ma.nombre LIKE ? OR
+      em.codigo_acta LIKE ? OR
+      em.ticket_helix LIKE ? OR
+      em.persona_origen LIKE ? OR
+      em.persona_destino LIKE ? OR
+      em.tipo_movimiento LIKE ? OR
+      to_.nombre_tienda LIKE ? OR
+      td.nombre_tienda LIKE ? OR
+      u.nombre LIKE ?
+    )`);
+    valores.push(termino, termino, termino, termino, termino, termino, termino, termino, termino, termino, termino, termino);
+  }
 
   if (filtros.equipo_id) {
     condiciones.push('em.equipo_id = ?');
@@ -210,10 +231,16 @@ export const listarMovimientos = async (filtros: FiltrosMovimiento = {}) => {
 
   const whereClause = condiciones.join(' AND ');
 
-  // Query para contar
+  // Query para contar (necesita los JOINs para la búsqueda)
   const queryCount = `
     SELECT COUNT(*) as total
     FROM equipos_movimientos em
+    INNER JOIN equipos e ON em.equipo_id = e.id
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id 
+    LEFT JOIN tienda to_ ON em.tienda_origen_id = to_.id
+    LEFT JOIN tienda td ON em.tienda_destino_id = td.id
+    INNER JOIN usuarios u ON em.usuario_id = u.id
     WHERE ${whereClause}
   `;
 
@@ -306,7 +333,7 @@ export const actualizarEstadoMovimiento = async (
   id: number,
   estado: 'PENDIENTE' | 'EN_TRANSITO' | 'COMPLETADO' | 'CANCELADO',
   fecha_llegada?: Date | string,
-  codigo_acta?: string  // ← NUEVO PARÁMETRO
+  codigo_acta?: string
 ): Promise<boolean> => {
   const campos: string[] = ['estado_movimiento = ?'];
   const valores: any[] = [estado];
@@ -316,7 +343,6 @@ export const actualizarEstadoMovimiento = async (
     valores.push(fecha_llegada);
   }
 
-  // ✅ AGREGAR: Actualizar código de acta
   if (codigo_acta) {
     campos.push('codigo_acta = ?');
     valores.push(codigo_acta);

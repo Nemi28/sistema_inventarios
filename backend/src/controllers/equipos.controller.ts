@@ -291,9 +291,10 @@ export const listarAlmacen = async (req: Request, res: Response) => {
     const {
       page,
       limit,
-      categoria_id,  // ← AGREGAR
-      subcategoria_id,  // ← AGREGAR
-      marca_id,  // ← AGREGAR
+      busqueda, // ← NUEVO
+      categoria_id,
+      subcategoria_id,
+      marca_id,
       modelo_id,
       estado_actual,
       ordenar_por,
@@ -303,9 +304,10 @@ export const listarAlmacen = async (req: Request, res: Response) => {
     const filtros: EquipoModel.FiltrosEquipo = {
       page: page ? parseInt(page as string) : undefined,
       limit: limit ? parseInt(limit as string) : undefined,
-      categoria_id: categoria_id ? parseInt(categoria_id as string) : undefined,  // ← AGREGAR
-      subcategoria_id: subcategoria_id ? parseInt(subcategoria_id as string) : undefined,  // ← AGREGAR
-      marca_id: marca_id ? parseInt(marca_id as string) : undefined,  // ← AGREGAR
+      busqueda: busqueda as string, // ← NUEVO
+      categoria_id: categoria_id ? parseInt(categoria_id as string) : undefined,
+      subcategoria_id: subcategoria_id ? parseInt(subcategoria_id as string) : undefined,
+      marca_id: marca_id ? parseInt(marca_id as string) : undefined,
       modelo_id: modelo_id ? parseInt(modelo_id as string) : undefined,
       estado_actual: estado_actual as string,
       ordenar_por: ordenar_por as string,
@@ -339,9 +341,10 @@ export const listarTiendas = async (req: Request, res: Response) => {
     const {
       page,
       limit,
-      categoria_id,  // ← AGREGAR
-      subcategoria_id,  // ← AGREGAR
-      marca_id,  // ← AGREGAR
+      busqueda, // ← NUEVO
+      categoria_id,
+      subcategoria_id,
+      marca_id,
       modelo_id,
       tienda_id,
       estado_actual,
@@ -352,9 +355,10 @@ export const listarTiendas = async (req: Request, res: Response) => {
     const filtros: EquipoModel.FiltrosEquipo = {
       page: page ? parseInt(page as string) : undefined,
       limit: limit ? parseInt(limit as string) : undefined,
-      categoria_id: categoria_id ? parseInt(categoria_id as string) : undefined,  // ← AGREGAR
-      subcategoria_id: subcategoria_id ? parseInt(subcategoria_id as string) : undefined,  // ← AGREGAR
-      marca_id: marca_id ? parseInt(marca_id as string) : undefined,  // ← AGREGAR
+      busqueda: busqueda as string, // ← NUEVO
+      categoria_id: categoria_id ? parseInt(categoria_id as string) : undefined,
+      subcategoria_id: subcategoria_id ? parseInt(subcategoria_id as string) : undefined,
+      marca_id: marca_id ? parseInt(marca_id as string) : undefined,
       modelo_id: modelo_id ? parseInt(modelo_id as string) : undefined,
       tienda_id: tienda_id ? parseInt(tienda_id as string) : undefined,
       estado_actual: estado_actual as string,
@@ -389,9 +393,10 @@ export const listarPersonas = async (req: Request, res: Response) => {
     const {
       page,
       limit,
-      categoria_id,  // ← AGREGAR
-      subcategoria_id,  // ← AGREGAR
-      marca_id,  // ← AGREGAR
+      busqueda, // ← NUEVO
+      categoria_id,
+      subcategoria_id,
+      marca_id,
       modelo_id,
       estado_actual,
       ordenar_por,
@@ -401,9 +406,10 @@ export const listarPersonas = async (req: Request, res: Response) => {
     const filtros: EquipoModel.FiltrosEquipo = {
       page: page ? parseInt(page as string) : undefined,
       limit: limit ? parseInt(limit as string) : undefined,
-      categoria_id: categoria_id ? parseInt(categoria_id as string) : undefined,  // ← AGREGAR
-      subcategoria_id: subcategoria_id ? parseInt(subcategoria_id as string) : undefined,  // ← AGREGAR
-      marca_id: marca_id ? parseInt(marca_id as string) : undefined,  // ← AGREGAR
+      busqueda: busqueda as string, // ← NUEVO
+      categoria_id: categoria_id ? parseInt(categoria_id as string) : undefined,
+      subcategoria_id: subcategoria_id ? parseInt(subcategoria_id as string) : undefined,
+      marca_id: marca_id ? parseInt(marca_id as string) : undefined,
       modelo_id: modelo_id ? parseInt(modelo_id as string) : undefined,
       estado_actual: estado_actual as string,
       ordenar_por: ordenar_por as string,

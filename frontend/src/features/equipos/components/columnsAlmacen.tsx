@@ -1,12 +1,12 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, ArrowRight } from 'lucide-react';
+import { Pencil, Trash2, History, Eye } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Equipo } from '../types';
 
 export const columnsAlmacen: ColumnDef<Equipo>[] = [
-  // ✅ NUEVA COLUMNA: Checkbox
+  // Checkbox
   {
     id: 'select',
     header: ({ table }) => (
@@ -144,13 +144,33 @@ export const columnsAlmacen: ColumnDef<Equipo>[] = [
   {
     id: 'acciones',
     header: 'Acciones',
-    size: 100,
+    size: 130,
     cell: ({ row, table }) => {
       const item = row.original;
-      const meta = table.options.meta as any;
+      const meta = table.options.meta as {
+        onView?: (equipo: Equipo) => void;
+        onEdit?: (equipo: Equipo) => void;
+        onDelete?: (equipo: Equipo) => void;
+        onViewHistory?: (equipo: Equipo) => void;
+      };
 
       return (
         <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (meta?.onView) {
+                meta.onView(item);
+              }
+            }}
+            className="h-7 w-7 p-0 hover:bg-purple-50 hover:text-purple-600"
+            title="Ver Detalle"
+            type="button"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
           <Button
             size="sm"
             variant="ghost"
@@ -160,11 +180,26 @@ export const columnsAlmacen: ColumnDef<Equipo>[] = [
                 meta.onEdit(item);
               }
             }}
-            className="h-6 w-6 p-0 hover:bg-blue-50 hover:text-blue-600"
+            className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
             title="Editar"
             type="button"
           >
-            <Pencil className="h-3 w-3" />
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (meta?.onViewHistory) {
+                meta.onViewHistory(item);
+              }
+            }}
+            className="h-7 w-7 p-0 hover:bg-indigo-50 hover:text-indigo-600"
+            title="Historial"
+            type="button"
+          >
+            <History className="h-3.5 w-3.5" />
           </Button>
           <Button
             size="sm"
@@ -175,24 +210,11 @@ export const columnsAlmacen: ColumnDef<Equipo>[] = [
                 meta.onDelete(item);
               }
             }}
-            className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-600"
+            className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
             title="Eliminar"
             type="button"
           >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              // TODO: Implementar movimiento
-            }}
-            className="h-6 w-6 p-0 hover:bg-green-50 hover:text-green-600"
-            title="Mover Equipo"
-            type="button"
-          >
-            <ArrowRight className="h-3 w-3" />
+            <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
       );

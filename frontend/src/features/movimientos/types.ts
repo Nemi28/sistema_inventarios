@@ -69,6 +69,7 @@ export interface ActualizarEstadoRequest {
 }
 
 export interface MovimientoFilters {
+  busqueda?: string; 
   equipo_id?: number;
   tipo_movimiento?: string;
   estado_movimiento?: string;

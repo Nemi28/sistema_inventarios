@@ -1,7 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { Eye, CheckCircle, Clock, XCircle, AlertCircle, ClipboardCheck } from 'lucide-react';
 import { Movimiento } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -35,15 +35,15 @@ export const columnsMovimientos: ColumnDef<Movimiento>[] = [
     ),
   },
   {
-  id: 'marca',
-  accessorKey: 'equipo_marca',  // ← CAMBIAR
-  header: 'Marca',
-  size: 90,
-  cell: ({ row }) => (
-    <span className="text-xs font-medium truncate block max-w-[90px]" title={row.original.equipo_marca}>
-      {row.original.equipo_marca || '-'}
-    </span>
-  ),
+    id: 'marca',
+    accessorKey: 'equipo_marca',
+    header: 'Marca',
+    size: 90,
+    cell: ({ row }) => (
+      <span className="text-xs font-medium truncate block max-w-[90px]" title={row.original.equipo_marca}>
+        {row.original.equipo_marca || '-'}
+      </span>
+    ),
   },
   {
     id: 'numero_serie',
@@ -193,13 +193,19 @@ export const columnsMovimientos: ColumnDef<Movimiento>[] = [
   {
     id: 'acciones',
     header: 'Acciones',
-    size: 80,
+    size: 100,
     cell: ({ row, table }) => {
       const item = row.original;
-      const meta = table.options.meta as any;
+      const meta = table.options.meta as {
+        onView?: (movimiento: Movimiento) => void;
+        onConfirmarRecepcion?: (movimiento: Movimiento) => void;
+      };
+
+      const esEnTransito = item.estado_movimiento === 'EN_TRANSITO';
 
       return (
         <div className="flex items-center gap-1">
+          {/* Botón Ver Detalle */}
           <Button
             size="sm"
             variant="ghost"
@@ -209,12 +215,31 @@ export const columnsMovimientos: ColumnDef<Movimiento>[] = [
                 meta.onView(item);
               }
             }}
-            className="h-6 w-6 p-0 hover:bg-blue-50 hover:text-blue-600"
+            className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
             title="Ver Detalle"
             type="button"
           >
-            <Eye className="h-3 w-3" />
+            <Eye className="h-3.5 w-3.5" />
           </Button>
+
+          {/* Botón Confirmar Recepción - Solo si está EN_TRANSITO */}
+          {esEnTransito && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (meta?.onConfirmarRecepcion) {
+                  meta.onConfirmarRecepcion(item);
+                }
+              }}
+              className="h-7 w-7 p-0 hover:bg-green-50 hover:text-green-600"
+              title="Confirmar Recepción"
+              type="button"
+            >
+              <ClipboardCheck className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       );
     },
