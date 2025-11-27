@@ -13,7 +13,10 @@ import {
   Tag,
   Store,
   Laptop,
-  ClipboardList
+  ClipboardList,
+  Warehouse,
+  UserCheck,
+  TrendingUp  // ← AGREGAR
 } from 'lucide-react';
 import { MenuItem } from '../types/menu.types';
 
@@ -36,6 +39,27 @@ export const menuItems: MenuItem[] = [
         label: 'Inventario de Equipos',
         icon: Laptop,
         path: '/equipos',
+        roles: ['administrador', 'gestor', 'operador']
+      },
+      {
+        id: 'equipos-almacen',
+        label: 'Almacén',
+        icon: Warehouse,
+        path: '/almacen',
+        roles: ['administrador', 'gestor', 'operador']
+      },
+      {
+        id: 'equipos-tiendas',
+        label: 'En Tiendas',
+        icon: Store,
+        path: '/tiendas-inventario',
+        roles: ['administrador', 'gestor', 'operador']
+      },
+      {
+        id: 'equipos-personas',
+        label: 'Asignados a Personas',
+        icon: UserCheck,
+        path: '/personas-inventario',
         roles: ['administrador', 'gestor', 'operador']
       },
       {
@@ -113,9 +137,9 @@ export const menuItems: MenuItem[] = [
       {
         id: 'inventario-movimientos',
         label: 'Movimientos',
-        icon: List,
-        path: '/inventario/movimientos',
-        roles: ['administrador', 'gestor']
+        icon: TrendingUp,  // ← CAMBIADO DE List A TrendingUp
+        path: '/movimientos',  // ← CAMBIADO DE /inventario/movimientos A /movimientos
+        roles: ['administrador', 'gestor', 'operador']  // ← AGREGADO 'operador'
       },
       {
         id: 'inventario-alertas',

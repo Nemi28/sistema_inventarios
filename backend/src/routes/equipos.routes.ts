@@ -20,6 +20,15 @@ router.get('/', verificarToken, equipoController.listar);
 // GET /api/equipos/buscar?q=termino - Buscar equipos
 router.get('/buscar', verificarToken, equipoController.buscar);
 
+// GET /api/equipos/almacen - Listar equipos en almacén
+router.get('/almacen', verificarToken, equipoController.listarAlmacen);
+
+// GET /api/equipos/tiendas - Listar equipos en tiendas
+router.get('/tiendas', verificarToken, equipoController.listarTiendas);
+
+// GET /api/equipos/personas - Listar equipos asignados a personas
+router.get('/personas', verificarToken, equipoController.listarPersonas);
+
 // GET /api/equipos/:id - Obtener equipo por ID
 router.get('/:id', verificarToken, equipoController.obtenerPorId);
 

@@ -52,6 +52,9 @@ export interface EquipoCompleto extends Equipo {
 export interface FiltrosEquipo extends PaginacionParams {
   activo?: boolean;
   modelo_id?: number;
+  categoria_id?: number;  // ← AGREGAR
+  subcategoria_id?: number;  // ← AGREGAR
+  marca_id?: number;  // ← AGREGAR
   estado_actual?: string;
   ubicacion_actual?: string;
   tienda_id?: number;
@@ -479,4 +482,311 @@ export const eliminarEquipo = async (id: number): Promise<boolean> => {
   );
 
   return resultado.affectedRows > 0;
+};
+
+/**
+ * Listar equipos en ALMACÉN con última ubicación
+ */
+export const listarEquiposAlmacen = async (filtros: FiltrosEquipo = {}) => {
+  const { page, limit, offset } = calcularPaginacion(filtros);
+  const { campo, direccion } = validarOrdenamiento(
+    filtros.ordenar_por,
+    filtros.orden,
+    ['e.numero_serie', 'e.inv_entel', 'e.estado_actual', 'e.fecha_creacion']
+  );
+
+  const condiciones: string[] = ['e.ubicacion_actual = ?', 'e.activo = true'];
+  const valores: any[] = ['ALMACEN'];
+
+  // Filtros en cascada
+  if (filtros.categoria_id) {
+    condiciones.push('c.id = ?');
+    valores.push(filtros.categoria_id);
+  }
+
+  if (filtros.subcategoria_id) {
+    condiciones.push('sc.id = ?');
+    valores.push(filtros.subcategoria_id);
+  }
+
+  if (filtros.marca_id) {
+    condiciones.push('ma.id = ?');
+    valores.push(filtros.marca_id);
+  }
+
+  if (filtros.modelo_id) {
+    condiciones.push('e.modelo_id = ?');
+    valores.push(filtros.modelo_id);
+  }
+
+  if (filtros.estado_actual) {
+    condiciones.push('e.estado_actual = ?');
+    valores.push(filtros.estado_actual);
+  }
+
+  const whereClause = condiciones.join(' AND ');
+
+  // Query para contar total
+  const queryCount = `
+    SELECT COUNT(DISTINCT e.id) as total
+    FROM equipos e
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    WHERE ${whereClause}
+  `;
+
+  // Query principal con última ubicación
+  const query = `
+    SELECT 
+      e.*,
+      c.id as categoria_id,
+      c.nombre as categoria_nombre,
+      sc.id as subcategoria_id,
+      sc.nombre as subcategoria_nombre,
+      ma.id as marca_id,
+      ma.nombre as marca_nombre,
+      m.nombre as modelo_nombre,
+      CASE 
+        WHEN mov_anterior.ubicacion_origen = 'TIENDA' 
+          THEN CONCAT('Tienda: ', t.nombre_tienda)
+        WHEN mov_anterior.ubicacion_origen = 'PERSONA' 
+          THEN CONCAT('Persona: ', mov_anterior.persona_origen)
+        ELSE NULL
+      END as ultima_ubicacion_origen
+    FROM equipos e
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    LEFT JOIN equipos_movimientos mov_anterior ON mov_anterior.equipo_id = e.id
+      AND mov_anterior.id = (
+        SELECT MAX(id) FROM equipos_movimientos 
+        WHERE equipo_id = e.id 
+        AND ubicacion_destino = 'ALMACEN'
+      )
+    LEFT JOIN tienda t ON mov_anterior.tienda_origen_id = t.id
+    WHERE ${whereClause}
+    ORDER BY ${campo} ${direccion}
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  const [countResult] = await pool.execute<RowDataPacket[]>(queryCount, valores);
+  const total = countResult[0].total;
+
+  const [equipos] = await pool.execute<RowDataPacket[]>(query, valores);
+
+  return {
+    data: equipos,
+    paginacion: generarPaginacion(total, page, limit),
+  };
+};
+
+/**
+ * Listar equipos en TIENDAS con datos de tienda
+ */
+export const listarEquiposTiendas = async (filtros: FiltrosEquipo = {}) => {
+  const { page, limit, offset } = calcularPaginacion(filtros);
+  const { campo, direccion } = validarOrdenamiento(
+    filtros.ordenar_por,
+    filtros.orden,
+    ['e.numero_serie', 'e.inv_entel', 't.nombre_tienda', 'e.fecha_creacion']
+  );
+
+  const condiciones: string[] = ['e.ubicacion_actual = ?', 'e.activo = true'];
+  const valores: any[] = ['TIENDA'];
+
+  // Filtros en cascada
+  if (filtros.categoria_id) {
+    condiciones.push('c.id = ?');
+    valores.push(filtros.categoria_id);
+  }
+
+  if (filtros.subcategoria_id) {
+    condiciones.push('sc.id = ?');
+    valores.push(filtros.subcategoria_id);
+  }
+
+  if (filtros.marca_id) {
+    condiciones.push('ma.id = ?');
+    valores.push(filtros.marca_id);
+  }
+
+  if (filtros.modelo_id) {
+    condiciones.push('e.modelo_id = ?');
+    valores.push(filtros.modelo_id);
+  }
+
+  if (filtros.tienda_id) {
+    condiciones.push('e.tienda_id = ?');
+    valores.push(filtros.tienda_id);
+  }
+
+  if (filtros.estado_actual) {
+    condiciones.push('e.estado_actual = ?');
+    valores.push(filtros.estado_actual);
+  }
+
+  const whereClause = condiciones.join(' AND ');
+
+  // Query para contar
+  const queryCount = `
+    SELECT COUNT(DISTINCT e.id) as total
+    FROM equipos e
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    LEFT JOIN tienda t ON e.tienda_id = t.id
+    WHERE ${whereClause}
+  `;
+
+  // Query principal
+  const query = `
+    SELECT 
+      e.*,
+      c.id as categoria_id,
+      c.nombre as categoria_nombre,
+      sc.id as subcategoria_id,
+      sc.nombre as subcategoria_nombre,
+      ma.id as marca_id,
+      ma.nombre as marca_nombre,
+      m.nombre as modelo_nombre,
+      t.nombre_tienda,
+      t.pdv,
+      s.razon_social as socio_nombre
+    FROM equipos e
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    LEFT JOIN tienda t ON e.tienda_id = t.id
+    LEFT JOIN socio s ON t.socio_id = s.id
+    WHERE ${whereClause}
+    ORDER BY ${campo} ${direccion}
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  const [countResult] = await pool.execute<RowDataPacket[]>(queryCount, valores);
+  const total = countResult[0].total;
+
+  const [equipos] = await pool.execute<RowDataPacket[]>(query, valores);
+
+  return {
+    data: equipos,
+    paginacion: generarPaginacion(total, page, limit),
+  };
+};
+
+/**
+ * Listar equipos asignados a PERSONAS
+ */
+export const listarEquiposPersonas = async (filtros: FiltrosEquipo = {}) => {
+  const { page, limit, offset } = calcularPaginacion(filtros);
+  const { campo, direccion } = validarOrdenamiento(
+    filtros.ordenar_por,
+    filtros.orden,
+    ['e.numero_serie', 'e.inv_entel', 'mov_actual.fecha_salida', 'e.fecha_creacion']
+  );
+
+  const condiciones: string[] = ['e.ubicacion_actual = ?', 'e.activo = true'];
+  const valores: any[] = ['PERSONA'];
+
+  // Filtros en cascada
+  if (filtros.categoria_id) {
+    condiciones.push('c.id = ?');
+    valores.push(filtros.categoria_id);
+  }
+
+  if (filtros.subcategoria_id) {
+    condiciones.push('sc.id = ?');
+    valores.push(filtros.subcategoria_id);
+  }
+
+  if (filtros.marca_id) {
+    condiciones.push('ma.id = ?');
+    valores.push(filtros.marca_id);
+  }
+
+  if (filtros.modelo_id) {
+    condiciones.push('e.modelo_id = ?');
+    valores.push(filtros.modelo_id);
+  }
+
+  if (filtros.estado_actual) {
+    condiciones.push('e.estado_actual = ?');
+    valores.push(filtros.estado_actual);
+  }
+
+  const whereClause = condiciones.join(' AND ');
+
+  // Query para contar
+  const queryCount = `
+    SELECT COUNT(DISTINCT e.id) as total
+    FROM equipos e
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    WHERE ${whereClause}
+  `;
+
+  // Query principal con datos de persona y última ubicación
+  const query = `
+    SELECT 
+      e.*,
+      c.id as categoria_id,
+      c.nombre as categoria_nombre,
+      sc.id as subcategoria_id,
+      sc.nombre as subcategoria_nombre,
+      ma.id as marca_id,
+      ma.nombre as marca_nombre,
+      m.nombre as modelo_nombre,
+      mov_actual.persona_destino as persona_asignada,
+      mov_actual.fecha_salida as fecha_asignacion,
+      mov_actual.codigo_acta,
+      CASE 
+        WHEN mov_anterior.ubicacion_origen = 'TIENDA' 
+          THEN CONCAT('Tienda: ', t.nombre_tienda)
+        WHEN mov_anterior.ubicacion_origen = 'PERSONA' 
+          THEN CONCAT('Persona: ', mov_anterior.persona_origen)
+        WHEN mov_anterior.ubicacion_origen = 'ALMACEN' 
+          THEN 'Almacén'
+        ELSE 'Almacén'
+      END as ultima_ubicacion_origen
+    FROM equipos e
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    LEFT JOIN equipos_movimientos mov_actual 
+      ON mov_actual.equipo_id = e.id 
+      AND mov_actual.id = (
+        SELECT MAX(id) FROM equipos_movimientos 
+        WHERE equipo_id = e.id 
+        AND ubicacion_destino = 'PERSONA'
+      )
+    LEFT JOIN equipos_movimientos mov_anterior
+      ON mov_anterior.equipo_id = e.id
+      AND mov_anterior.id = (
+        SELECT MAX(id) FROM equipos_movimientos 
+        WHERE equipo_id = e.id 
+        AND id < mov_actual.id
+      )
+    LEFT JOIN tienda t ON mov_anterior.tienda_origen_id = t.id
+    WHERE ${whereClause}
+    ORDER BY ${campo} ${direccion}
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  const [countResult] = await pool.execute<RowDataPacket[]>(queryCount, valores);
+  const total = countResult[0].total;
+
+  const [equipos] = await pool.execute<RowDataPacket[]>(query, valores);
+
+  return {
+    data: equipos,
+    paginacion: generarPaginacion(total, page, limit),
+  };
 };

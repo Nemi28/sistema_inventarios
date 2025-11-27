@@ -22,7 +22,8 @@ export interface Equipo {
   activo: boolean;
   fecha_creacion: string;
   fecha_actualizacion: string;
-  // Datos de JOINs
+  
+  // Datos de JOINs - Originales
   modelo_nombre?: string;
   marca_nombre?: string;
   categoria_nombre?: string;
@@ -31,6 +32,19 @@ export interface Equipo {
   tienda_pdv?: string;
   orden_numero?: string;
   equipo_principal_serie?: string;
+  
+  // ← NUEVOS: Datos para Vista ALMACÉN
+  ultima_ubicacion_origen?: string;
+  
+  // ← NUEVOS: Datos para Vista TIENDAS
+  nombre_tienda?: string;
+  pdv?: string;
+  socio_nombre?: string;
+  
+  // ← NUEVOS: Datos para Vista PERSONAS
+  persona_asignada?: string;
+  fecha_asignacion?: string;
+  codigo_acta?: string;
 }
 
 export interface EquipoFilters {

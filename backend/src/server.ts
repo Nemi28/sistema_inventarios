@@ -15,6 +15,7 @@ import ordenCompraRoutes from './routes/orden_compra.routes';
 import actaRoutes from './routes/acta.routes';
 import marcaRoutes from './routes/marca.routes';
 import subcategoriaRoutes from './routes/subcategoria.routes';
+import movimientosRoutes from './routes/movimientos.routes';
 import modeloRoutes from './routes/modelo.routes';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 
@@ -93,6 +94,7 @@ app.use('/api/ordenes-compra', ordenCompraRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/password', passwordRoutes);
 app.use('/api/actas', actaRoutes);
+app.use('/api/movimientos', movimientosRoutes);
 
 // Middleware de rutas no encontradas
 app.use(notFound);
