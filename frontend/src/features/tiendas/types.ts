@@ -7,6 +7,9 @@ export interface Tienda {
   socio_id: number;
   direccion: string;
   ubigeo: string;
+  responsable_socio?: string;
+  responsable_entel?: string;
+  enlace?: string;
   activo: boolean;
   fecha_creacion: string;
   fecha_actualizacion: string;
@@ -23,6 +26,9 @@ export interface TiendaFormData {
   socio_id: number;
   direccion: string;
   ubigeo: string;
+  responsable_socio?: string;
+  responsable_entel?: string;
+  enlace?: string;
   activo: boolean;
 }
 

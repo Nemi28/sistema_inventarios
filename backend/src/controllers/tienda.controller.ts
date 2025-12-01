@@ -24,7 +24,19 @@ export const crear = async (req: Request, res: Response) => {
       });
     }
 
-    const { pdv, tipo_local, perfil_local, nombre_tienda, socio_id, direccion, ubigeo, activo } = req.body;
+    const { 
+      pdv, 
+      tipo_local, 
+      perfil_local, 
+      nombre_tienda, 
+      socio_id, 
+      direccion, 
+      ubigeo, 
+      responsable_socio,
+      responsable_entel,
+      enlace,
+      activo 
+    } = req.body;
 
     // Verificar que el socio exista
     const socioExiste = await TiendaModel.existeSocioPorId(socio_id);
@@ -61,6 +73,9 @@ export const crear = async (req: Request, res: Response) => {
       socio_id,
       direccion,
       ubigeo,
+      responsable_socio,
+      responsable_entel,
+      enlace: enlace || 'NO',
       activo: activo ?? true,
     });
 
@@ -207,7 +222,19 @@ export const actualizar = async (req: Request, res: Response) => {
     }
 
     const { id } = req.params;
-    const { pdv, tipo_local, perfil_local, nombre_tienda, socio_id, direccion, ubigeo, activo } = req.body;
+    const { 
+      pdv, 
+      tipo_local, 
+      perfil_local, 
+      nombre_tienda, 
+      socio_id, 
+      direccion, 
+      ubigeo, 
+      responsable_socio,
+      responsable_entel,
+      enlace,
+      activo 
+    } = req.body;
 
     // Verificar si existe
     const tiendaExistente = await TiendaModel.obtenerTiendaPorId(parseInt(id));
@@ -260,6 +287,9 @@ export const actualizar = async (req: Request, res: Response) => {
       socio_id,
       direccion,
       ubigeo,
+      responsable_socio,
+      responsable_entel,
+      enlace,
       activo,
     });
 

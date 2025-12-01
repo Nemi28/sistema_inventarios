@@ -21,6 +21,9 @@ export interface Tienda {
   socio_id: number;
   direccion: string;
   ubigeo: string;
+  responsable_socio?: string;
+  responsable_entel?: string;
+  enlace?: string;
   activo?: boolean;
   fecha_creacion?: Date;
   fecha_actualizacion?: Date;
@@ -46,8 +49,8 @@ export interface FiltrosTienda extends PaginacionParams {
 export const crearTienda = async (tienda: Tienda): Promise<number> => {
   try {
     const query = `
-      INSERT INTO tienda (pdv, tipo_local, perfil_local, nombre_tienda, socio_id, direccion, ubigeo, activo)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tienda (pdv, tipo_local, perfil_local, nombre_tienda, socio_id, direccion, ubigeo, responsable_socio, responsable_entel, enlace, activo)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [resultado] = await pool.execute<ResultSetHeader>(query, [
@@ -58,6 +61,9 @@ export const crearTienda = async (tienda: Tienda): Promise<number> => {
       tienda.socio_id,
       tienda.direccion,
       tienda.ubigeo,
+      tienda.responsable_socio || null,
+      tienda.responsable_entel || null,
+      tienda.enlace || 'NO',
       tienda.activo ?? true,
     ]);
 
@@ -152,10 +158,14 @@ export const buscarTiendas = async (termino: string, filtros: PaginacionParams =
       t.nombre_tienda LIKE ? OR 
       t.direccion LIKE ? OR 
       t.ubigeo LIKE ? OR 
-      s.razon_social LIKE ?
+      s.razon_social LIKE ? OR
+      t.responsable_socio LIKE ? OR
+      t.responsable_entel LIKE ?
     ) AND t.activo = true
   `;
   const [totalRows] = await pool.execute<RowDataPacket[]>(queryCount, [
+    terminoBusqueda,
+    terminoBusqueda,
     terminoBusqueda,
     terminoBusqueda,
     terminoBusqueda,
@@ -176,12 +186,16 @@ export const buscarTiendas = async (termino: string, filtros: PaginacionParams =
       t.nombre_tienda LIKE ? OR 
       t.direccion LIKE ? OR 
       t.ubigeo LIKE ? OR 
-      s.razon_social LIKE ?
+      s.razon_social LIKE ? OR
+      t.responsable_socio LIKE ? OR
+      t.responsable_entel LIKE ?
     ) AND t.activo = true
     ORDER BY t.fecha_creacion DESC
     LIMIT ${limit} OFFSET ${offset}
   `;
   const [tiendas] = await pool.execute<RowDataPacket[]>(querySelect, [
+    terminoBusqueda,
+    terminoBusqueda,
     terminoBusqueda,
     terminoBusqueda,
     terminoBusqueda,
@@ -291,6 +305,21 @@ export const actualizarTienda = async (id: number, datos: Partial<Tienda>): Prom
     if (datos.ubigeo !== undefined) {
       campos.push('ubigeo = ?');
       valores.push(datos.ubigeo);
+    }
+
+    if (datos.responsable_socio !== undefined) {
+      campos.push('responsable_socio = ?');
+      valores.push(datos.responsable_socio || null);
+    }
+
+    if (datos.responsable_entel !== undefined) {
+      campos.push('responsable_entel = ?');
+      valores.push(datos.responsable_entel || null);
+    }
+
+    if (datos.enlace !== undefined) {
+      campos.push('enlace = ?');
+      valores.push(datos.enlace);
     }
 
     if (datos.activo !== undefined) {
