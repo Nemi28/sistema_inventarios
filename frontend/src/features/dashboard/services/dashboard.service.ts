@@ -1,166 +1,137 @@
 import api from '@/services/api';
+
 import {
-  DashboardStats,
-  ChartData,
-  TiendasPorSocio,
-  UltimoSKU,
-  UltimaTienda,
-  UltimaOrden,
-  InventoryMetrics,
-  CoverageMetrics,
-  GrowthRate,
-  TopCategoria,
-  DistribucionEquipo,
-  TopMarca,
-  MatrizCoberturaResponse,
-  UltimoModelo,
-  AlertasIndicadores,
+  DashboardResponse,
+  EquiposPorUbicacion,
+  EquiposPorEstado,
+  ActividadMovimientos,
+  AlertasOperativas,
+  MovimientoPorMes,
+  DistribucionUbicacion,
+  MovimientoPorTipo,
+  EquipoPorCategoria,
+  TopTiendaEquipos,
+  UltimoMovimiento,
+  EquipoEnTransito,
+  ResumenCatalogo,
+  TiendasPorSocio
 } from '../types';
 
-// =============================================
-// SERVICIOS EXISTENTES
-// =============================================
+// =============================================================
+// KPIS DE EQUIPOS
+// =============================================================
 
-export const obtenerStats = async (): Promise<DashboardStats> => {
-  const { data } = await api.get<{ success: boolean; data: DashboardStats }>(
-    '/api/dashboard/stats'
+export const obtenerEquiposPorUbicacion = async (): Promise<EquiposPorUbicacion> => {
+  const { data } = await api.get<DashboardResponse<EquiposPorUbicacion>>(
+    '/api/dashboard/equipos-ubicacion'
   );
   return data.data;
 };
 
-export const obtenerSkusPorMes = async (periodo?: number): Promise<ChartData[]> => {
-  const { data } = await api.get<{ success: boolean; data: ChartData[] }>(
-    '/api/dashboard/skus-por-mes',
-    { params: { periodo: periodo || 6 } }
+export const obtenerEquiposPorEstado = async (): Promise<EquiposPorEstado> => {
+  const { data } = await api.get<DashboardResponse<EquiposPorEstado>>(
+    '/api/dashboard/equipos-estado'
+  );
+  return data.data;
+};
+
+// =============================================================
+// ACTIVIDAD DE MOVIMIENTOS
+// =============================================================
+
+export const obtenerActividadMovimientos = async (): Promise<ActividadMovimientos> => {
+  const { data } = await api.get<DashboardResponse<ActividadMovimientos>>(
+    '/api/dashboard/actividad-movimientos'
+  );
+  return data.data;
+};
+
+// =============================================================
+// ALERTAS OPERATIVAS
+// =============================================================
+
+export const obtenerAlertasOperativas = async (): Promise<AlertasOperativas> => {
+  const { data } = await api.get<DashboardResponse<AlertasOperativas>>(
+    '/api/dashboard/alertas-operativas'
+  );
+  return data.data;
+};
+
+// =============================================================
+// GRÁFICOS
+// =============================================================
+
+export const obtenerMovimientosPorMes = async (
+  periodo: number
+): Promise<MovimientoPorMes[]> => {
+  const { data } = await api.get<DashboardResponse<MovimientoPorMes[]>>(
+    `/api/dashboard/movimientos-por-mes?periodo=${periodo}`
+  );
+
+  return data.data;
+};
+
+
+export const obtenerDistribucionUbicacion = async (): Promise<DistribucionUbicacion[]> => {
+  const { data } = await api.get<DashboardResponse<DistribucionUbicacion[]>>(
+    '/api/dashboard/distribucion-ubicacion'
+  );
+  return data.data;
+};
+
+export const obtenerMovimientosPorTipo = async (): Promise<MovimientoPorTipo[]> => {
+  const { data } = await api.get<DashboardResponse<MovimientoPorTipo[]>>(
+    '/api/dashboard/movimientos-por-tipo'
+  );
+  return data.data;
+};
+
+export const obtenerEquiposPorCategoria = async (): Promise<EquipoPorCategoria[]> => {
+  const { data } = await api.get<DashboardResponse<EquipoPorCategoria[]>>(
+    '/api/dashboard/equipos-por-categoria'
+  );
+  return data.data;
+};
+
+export const obtenerTopTiendasEquipos = async (): Promise<TopTiendaEquipos[]> => {
+  const { data } = await api.get<DashboardResponse<TopTiendaEquipos[]>>(
+    '/api/dashboard/top-tiendas-equipos'
+  );
+  return data.data;
+};
+
+// =============================================================
+// TABLAS RECIENTES
+// =============================================================
+
+export const obtenerUltimosMovimientos = async (): Promise<UltimoMovimiento[]> => {
+  const { data } = await api.get<DashboardResponse<UltimoMovimiento[]>>(
+    '/api/dashboard/ultimos-movimientos'
+  );
+  return data.data;
+};
+
+export const obtenerEquiposEnTransito = async (): Promise<EquipoEnTransito[]> => {
+  const { data } = await api.get<DashboardResponse<EquipoEnTransito[]>>(
+    '/api/dashboard/equipos-en-transito'
+  );
+  return data.data;
+};
+
+// =============================================================
+// RESUMEN DE CATÁLOGO
+// =============================================================
+
+export const obtenerResumenCatalogo = async (): Promise<ResumenCatalogo> => {
+  const { data } = await api.get<DashboardResponse<ResumenCatalogo>>(
+    '/api/dashboard/resumen-catalogo'
   );
   return data.data;
 };
 
 export const obtenerTiendasPorSocio = async (): Promise<TiendasPorSocio[]> => {
-  const { data } = await api.get<{ success: boolean; data: TiendasPorSocio[] }>(
+  const { data } = await api.get<DashboardResponse<TiendasPorSocio[]>>(
     '/api/dashboard/tiendas-por-socio'
-  );
-  return data.data;
-};
-
-export const obtenerOrdenesPorMes = async (periodo?: number): Promise<ChartData[]> => {
-  const { data } = await api.get<{ success: boolean; data: ChartData[] }>(
-    '/api/dashboard/ordenes-por-mes',
-    { params: { periodo: periodo || 6 } }
-  );
-  return data.data;
-};
-
-export const obtenerUltimosSKUs = async (): Promise<UltimoSKU[]> => {
-  const { data } = await api.get<{ success: boolean; data: UltimoSKU[] }>(
-    '/api/dashboard/ultimos-skus'
-  );
-  return data.data;
-};
-
-export const obtenerUltimasTiendas = async (): Promise<UltimaTienda[]> => {
-  const { data } = await api.get<{ success: boolean; data: UltimaTienda[] }>(
-    '/api/dashboard/ultimas-tiendas'
-  );
-  return data.data;
-};
-
-export const obtenerUltimasOrdenes = async (): Promise<UltimaOrden[]> => {
-  const { data } = await api.get<{ success: boolean; data: UltimaOrden[] }>(
-    '/api/dashboard/ultimas-ordenes'
-  );
-  return data.data;
-};
-
-// =============================================
-// SERVICIOS NUEVOS - MÉTRICAS
-// =============================================
-
-export const obtenerMetricasInventario = async (): Promise<InventoryMetrics> => {
-  const { data } = await api.get<{ success: boolean; data: InventoryMetrics }>(
-    '/api/dashboard/metricas-inventario'
-  );
-  return data.data;
-};
-
-export const obtenerMetricasCobertura = async (): Promise<CoverageMetrics> => {
-  const { data } = await api.get<{ success: boolean; data: CoverageMetrics }>(
-    '/api/dashboard/metricas-cobertura'
-  );
-  return data.data;
-};
-
-export const obtenerTasaCrecimiento = async (): Promise<GrowthRate> => {
-  const { data } = await api.get<{ success: boolean; data: GrowthRate }>(
-    '/api/dashboard/tasa-crecimiento'
-  );
-  return data.data;
-};
-
-// =============================================
-// SERVICIOS NUEVOS - GRÁFICOS
-// =============================================
-
-export const obtenerModelosPorMes = async (periodo?: number): Promise<ChartData[]> => {
-  const { data } = await api.get<{ success: boolean; data: ChartData[] }>(
-    '/api/dashboard/modelos-por-mes',
-    { params: { periodo: periodo || 6 } }
-  );
-  return data.data;
-};
-
-export const obtenerTopCategorias = async (limit?: number): Promise<TopCategoria[]> => {
-  const { data } = await api.get<{ success: boolean; data: TopCategoria[] }>(
-    '/api/dashboard/top-categorias',
-    { params: { limit: limit || 10 } }
-  );
-  return data.data;
-};
-
-export const obtenerDistribucionEquipos = async (): Promise<DistribucionEquipo[]> => {
-  const { data } = await api.get<{ success: boolean; data: DistribucionEquipo[] }>(
-    '/api/dashboard/distribucion-equipos'
-  );
-  return data.data;
-};
-
-export const obtenerTopMarcas = async (
-  limit?: number,
-  categoriaId?: number
-): Promise<TopMarca[]> => {
-  const { data } = await api.get<{ success: boolean; data: TopMarca[] }>(
-    '/api/dashboard/top-marcas',
-    { params: { limit: limit || 10, categoria_id: categoriaId } }
-  );
-  return data.data;
-};
-
-export const obtenerMatrizCobertura = async (): Promise<MatrizCoberturaResponse> => {
-  const { data } = await api.get<{ success: boolean; data: MatrizCoberturaResponse }>(
-    '/api/dashboard/matriz-cobertura'
-  );
-  return data.data;
-};
-
-// =============================================
-// SERVICIOS NUEVOS - ACTIVIDAD RECIENTE
-// =============================================
-
-export const obtenerUltimosModelos = async (limit?: number): Promise<UltimoModelo[]> => {
-  const { data } = await api.get<{ success: boolean; data: UltimoModelo[] }>(
-    '/api/dashboard/ultimos-modelos',
-    { params: { limit: limit || 5 } }
-  );
-  return data.data;
-};
-
-// =============================================
-// SERVICIOS NUEVOS - ALERTAS E INDICADORES
-// =============================================
-
-export const obtenerAlertasIndicadores = async (): Promise<AlertasIndicadores> => {
-  const { data } = await api.get<{ success: boolean; data: AlertasIndicadores }>(
-    '/api/dashboard/alertas-indicadores'
   );
   return data.data;
 };

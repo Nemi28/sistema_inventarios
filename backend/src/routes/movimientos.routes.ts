@@ -15,6 +15,14 @@ const router = Router();
 // GET /api/movimientos - Listar movimientos con paginación y filtros
 router.get('/', verificarToken, movimientoController.listar);
 
+// GET /api/movimientos/exportar - Exportar movimientos a Excel
+router.get(
+  '/exportar',
+  verificarToken,
+  verificarRol('gestor', 'administrador'),
+  movimientoController.exportarExcel
+);
+
 // GET /api/movimientos/equipo/:equipoId - Obtener historial de un equipo
 router.get('/equipo/:equipoId', verificarToken, movimientoController.obtenerHistorialEquipo);
 
@@ -24,6 +32,14 @@ router.get('/:id', verificarToken, movimientoController.obtenerPorId);
 /**
  * Rutas protegidas (requieren rol gestor o administrador)
  */
+
+// POST /api/movimientos/validar-ubicacion - Validar ubicación de equipos antes de mover
+router.post(
+  '/validar-ubicacion',
+  verificarToken,
+  verificarRol('gestor', 'administrador'),
+  movimientoController.validarUbicacion
+);
 
 // POST /api/movimientos - Crear movimiento (uno o múltiples equipos)
 router.post(
