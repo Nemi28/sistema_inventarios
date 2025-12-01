@@ -84,8 +84,6 @@ export const EquipoFormModal = ({
       hostname: '',
       posicion_tienda: '',
       area_tienda: '',
-      responsable_socio: '',
-      responsable_entel: '',
       es_accesorio: false,
       equipo_principal_id: undefined,
       observaciones: '',
@@ -131,8 +129,6 @@ export const EquipoFormModal = ({
         hostname: equipo.hostname || '',
         posicion_tienda: equipo.posicion_tienda || '',
         area_tienda: equipo.area_tienda || '',
-        responsable_socio: equipo.responsable_socio || '',
-        responsable_entel: equipo.responsable_entel || '',
         es_accesorio: equipo.es_accesorio ?? false,
         equipo_principal_id: equipo.equipo_principal_id || undefined,
         observaciones: equipo.observaciones || '',
@@ -170,8 +166,6 @@ export const EquipoFormModal = ({
         hostname: '',
         posicion_tienda: '',
         area_tienda: '',
-        responsable_socio: '',
-        responsable_entel: '',
         es_accesorio: false,
         equipo_principal_id: undefined,
         observaciones: '',
@@ -205,8 +199,6 @@ export const EquipoFormModal = ({
         hostname: data.hostname?.trim() || undefined,
         posicion_tienda: data.posicion_tienda?.trim() || undefined,
         area_tienda: data.area_tienda?.trim() || undefined,
-        responsable_socio: data.responsable_socio?.trim() || undefined,
-        responsable_entel: data.responsable_entel?.trim() || undefined,
         es_accesorio: !!data.es_accesorio,
         equipo_principal_id: data.equipo_principal_id || undefined,
         observaciones: data.observaciones?.trim() || undefined,
@@ -537,36 +529,6 @@ export const EquipoFormModal = ({
                         <FormLabel>Área</FormLabel>
                         <FormControl>
                           <Input placeholder="CAJA" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="responsable_socio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Responsable Socio</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nombre del responsable" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="responsable_entel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Responsable Entel</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nombre del responsable" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

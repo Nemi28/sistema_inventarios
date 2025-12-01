@@ -129,6 +129,20 @@ export const tiendaSchema = z.object({
     .length(6, 'El UBIGEO debe tener exactamente 6 dígitos')
     .regex(/^[0-9]{6}$/, 'El UBIGEO debe contener solo números'),
   
+  responsable_socio: z
+    .string()
+    .max(100, 'El responsable del socio no puede exceder 100 caracteres')
+    .optional()
+    .or(z.literal('')),
+  
+  responsable_entel: z
+    .string()
+    .max(100, 'El responsable Entel no puede exceder 100 caracteres')
+    .optional()
+    .or(z.literal('')),
+  
+  enlace: z.enum(['SI', 'NO']),
+  
   activo: z.boolean(),
 });
 

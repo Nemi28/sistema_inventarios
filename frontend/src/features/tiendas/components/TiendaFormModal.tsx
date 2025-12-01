@@ -61,6 +61,9 @@ export const TiendaFormModal = ({
       socio_id: 0,
       direccion: '',
       ubigeo: '',
+      responsable_socio: '',
+      responsable_entel: '',
+      enlace: 'NO' as const,
       activo: true,
     },
     mode: 'onChange',
@@ -94,6 +97,9 @@ export const TiendaFormModal = ({
         socio_id: tienda.socio_id,
         direccion: tienda.direccion,
         ubigeo: tienda.ubigeo,
+        responsable_socio: tienda.responsable_socio || '',
+        responsable_entel: tienda.responsable_entel || '',
+        enlace: (tienda.enlace as 'SI' | 'NO') || 'NO',
         activo: Boolean(tienda.activo),
       });
     } else {
@@ -105,6 +111,9 @@ export const TiendaFormModal = ({
         socio_id: 0,
         direccion: '',
         ubigeo: '',
+        responsable_socio: '',
+        responsable_entel: '',
+        enlace: 'NO' as const,
         activo: true,
       });
     }
@@ -312,6 +321,71 @@ export const TiendaFormModal = ({
                   <FormDescription>
                     6 dígitos numéricos (código INEI)
                   </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Enlace */}
+            <FormField
+              control={form.control}
+              name="enlace"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Enlace</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="SI">SI</SelectItem>
+                      <SelectItem value="NO">NO</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    ¿La tienda tiene enlace?
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Responsable Socio */}
+            <FormField
+              control={form.control}
+              name="responsable_socio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Responsable Socio</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Nombre del responsable del socio" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Responsable Entel */}
+            <FormField
+              control={form.control}
+              name="responsable_entel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Responsable Entel</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Nombre del responsable Entel" 
+                      {...field} 
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

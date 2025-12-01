@@ -6,7 +6,7 @@
 import { Router } from 'express';
 import * as tiendaController from '../controllers/tienda.controller';
 import { verificarToken, verificarRol } from '../middlewares/auth.middleware';
-import { validarCrearTienda, validarActualizarTienda } from '../middlewares/validators';
+import { validarCrearTienda, validarActualizarTienda } from '../middlewares/tienda.validators';
 
 const router = Router();
 

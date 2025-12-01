@@ -18,8 +18,6 @@ export const equipoSchema = z.object({
   hostname: z.string().optional().or(z.literal('')),
   posicion_tienda: z.string().optional().or(z.literal('')),
   area_tienda: z.string().optional().or(z.literal('')),
-  responsable_socio: z.string().optional().or(z.literal('')),
-  responsable_entel: z.string().optional().or(z.literal('')),
   es_accesorio: z.any().optional(), // ✅ any para evitar problemas
   equipo_principal_id: z.number().optional(),
   observaciones: z.string().optional().or(z.literal('')),

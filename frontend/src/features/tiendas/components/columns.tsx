@@ -40,14 +40,6 @@ export const columns: ColumnDef<Tienda>[] = [
     ),
   },
   {
-    id: 'tipo_local',
-    accessorKey: 'tipo_local',
-    header: 'Tipo',
-    cell: ({ row }) => (
-      <span className="text-sm">{row.original.tipo_local}</span>
-    ),
-  },
-  {
     id: 'perfil_local',
     accessorKey: 'perfil_local',
     header: 'Perfil',
@@ -58,11 +50,45 @@ export const columns: ColumnDef<Tienda>[] = [
     ),
   },
   {
+    id: 'enlace',
+    accessorKey: 'enlace',
+    header: 'Enlace',
+    cell: ({ row }) => (
+      <Badge 
+        variant={row.original.enlace === 'SI' ? 'default' : 'secondary'}
+        className={row.original.enlace === 'SI' ? 'bg-blue-500' : ''}
+      >
+        {row.original.enlace || 'NO'}
+      </Badge>
+    ),
+  },
+  {
+    id: 'responsables',
+    header: 'Responsables',
+    cell: ({ row }) => (
+      <div className="text-sm">
+        {row.original.responsable_socio && (
+          <div className="text-gray-600">
+            <span className="text-xs text-gray-400">Socio:</span> {row.original.responsable_socio}
+          </div>
+        )}
+        {row.original.responsable_entel && (
+          <div className="text-gray-600">
+            <span className="text-xs text-gray-400">Entel:</span> {row.original.responsable_entel}
+          </div>
+        )}
+        {!row.original.responsable_socio && !row.original.responsable_entel && (
+          <span className="text-gray-400 text-xs">Sin asignar</span>
+        )}
+      </div>
+    ),
+  },
+  {
     id: 'direccion',
     accessorKey: 'direccion',
     header: 'Dirección',
     cell: ({ row }) => (
-      <span className="text-sm text-gray-600 line-clamp-1 max-w-[200px]">
+      <span className="text-sm text-gray-600 line-clamp-1 max-w-[180px]">
         {row.original.direccion}
       </span>
     ),
@@ -86,7 +112,7 @@ export const columns: ColumnDef<Tienda>[] = [
         variant={row.original.activo ? 'default' : 'destructive'}
         className={row.original.activo ? 'bg-green-500 hover:bg-green-600' : ''}
       >
-        {row.original.activo ? '✅ Activo' : '❌ Inactivo'}
+        {row.original.activo ? 'Activo' : 'Inactivo'}
       </Badge>
     ),
   },
