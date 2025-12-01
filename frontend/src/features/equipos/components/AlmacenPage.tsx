@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Warehouse, TrendingUp } from 'lucide-react';
+import { Plus, Warehouse, TrendingUp, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SearchBar } from '@/components/common/SearchBar';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
@@ -19,12 +19,15 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { columnsAlmacen } from './columnsAlmacen';
 import { Equipo } from '../types';
 import { RowSelectionState } from '@tanstack/react-table';
+import { exportarEquiposExcel } from '../services/equipos.export.service';
+import { toast } from 'sonner';
 
 export const AlmacenPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [editingEquipo, setEditingEquipo] = useState<Equipo | null>(null);
   const [deletingItem, setDeletingItem] = useState<Equipo | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   
   // Debounce para búsqueda (espera 400ms después de dejar de escribir)
   const debouncedSearch = useDebounce(searchTerm, 400);
@@ -63,7 +66,7 @@ export const AlmacenPage = () => {
     subcategoria_id: subcategoriaId,
     marca_id: marcaId,
     modelo_id: modeloId,
-    busqueda: debouncedSearch || undefined, // ← Conectar búsqueda
+    busqueda: debouncedSearch || undefined,
     ordenar_por: 'e.fecha_creacion',
     orden: 'DESC',
   });
@@ -136,6 +139,27 @@ export const AlmacenPage = () => {
     setPage(1);
   };
 
+  // Exportar a Excel
+  const handleExportar = async () => {
+    try {
+      setIsExporting(true);
+      await exportarEquiposExcel({
+        ubicacion: 'ALMACEN',
+        categoria_id: categoriaId,
+        subcategoria_id: subcategoriaId,
+        marca_id: marcaId,
+        modelo_id: modeloId,
+        busqueda: debouncedSearch || undefined,
+      });
+      toast.success('Excel exportado correctamente');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      toast.error('Error al exportar el archivo');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Manejar cambios en la selección
   const handleRowSelectionChange = (updaterOrValue: any) => {
     setRowSelection((old) => {
@@ -195,12 +219,25 @@ export const AlmacenPage = () => {
             </p>
           </div>
         </div>
-        {canCreateEdit && (
-          <Button onClick={handleCreate} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Equipo
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canCreateEdit && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleExportar}
+                disabled={isExporting || isLoading}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                {isExporting ? 'Exportando...' : 'Exportar Excel'}
+              </Button>
+              <Button onClick={handleCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nuevo Equipo
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Búsqueda */}

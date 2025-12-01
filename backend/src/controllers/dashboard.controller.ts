@@ -1,684 +1,357 @@
+/**
+ * Controlador Dashboard v2
+ * Sistema de Gestión de Inventarios
+ * Enfocado en métricas operativas de equipos y movimientos
+ */
+
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
 import { RowDataPacket } from 'mysql2';
-import {
-  DashboardStats,
-  SkusPorMes,
-  TiendasPorSocio,
-  OrdenesPorMes,
-  UltimoSKU,
-  UltimaTienda,
-  UltimaOrden,
-  InventoryMetrics,
-  CoverageMetrics,
-  GrowthRate,
-  ModelosPorMes,
-  TopCategoria,
-  DistribucionEquipo,
-  TopMarca,
-  MatrizCobertura,
-  UltimoModelo,
-  AlertasIndicadores,
-  UltimoSKUEnhanced,
-  UltimaOrdenEnhanced,
-  FiltrosDashboard,
-} from '../types/dashboard.types';
 
 export class DashboardController {
   // =============================================
-  // MÉTODOS EXISTENTES (ACTUALIZADOS CON TYPES)
+  // KPIS DE EQUIPOS
   // =============================================
 
   /**
-   * Obtener estadísticas generales del dashboard
-   * GET /api/dashboard/stats
+   * Obtener KPIs de equipos por ubicación
+   * GET /api/dashboard/equipos-ubicacion
    */
-  static async getStats(req: Request, res: Response): Promise<void> {
+  static async getEquiposPorUbicacion(req: Request, res: Response): Promise<void> {
     try {
-      // Consultas en paralelo para mejor rendimiento
-      const [
-        [skusResult],
-        [tiendasResult],
-        [sociosResult],
-        [ordenesResult],
-        [categoriasResult],
-      ] = await Promise.all([
-        pool.query<RowDataPacket[]>(
-          'SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM skus'
-        ),
-        pool.query<RowDataPacket[]>(
-          'SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM tienda'
-        ),
-        pool.query<RowDataPacket[]>(
-          'SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM socio'
-        ),
-        pool.query<RowDataPacket[]>(
-          'SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM ordenes_compra'
-        ),
-        pool.query<RowDataPacket[]>(
-          'SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM categorias'
-        ),
-      ]);
+      const [result] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN ubicacion_actual = 'ALMACEN' THEN 1 ELSE 0 END) as en_almacen,
+          SUM(CASE WHEN ubicacion_actual = 'TIENDA' THEN 1 ELSE 0 END) as en_tiendas,
+          SUM(CASE WHEN ubicacion_actual = 'PERSONA' THEN 1 ELSE 0 END) as en_personas,
+          SUM(CASE WHEN ubicacion_actual = 'EN_TRANSITO' THEN 1 ELSE 0 END) as en_transito
+        FROM equipos
+        WHERE activo = true
+      `);
 
-      const stats: DashboardStats = {
-        skus: {
-          total: skusResult[0].total,
-          activos: skusResult[0].activos,
-        },
-        tiendas: {
-          total: tiendasResult[0].total,
-          activos: tiendasResult[0].activos,
-        },
-        socios: {
-          total: sociosResult[0].total,
-          activos: sociosResult[0].activos,
-        },
-        ordenes: {
-          total: ordenesResult[0].total,
-          activos: ordenesResult[0].activos,
-        },
-        categorias: {
-          total: categoriasResult[0].total,
-          activos: categoriasResult[0].activos,
-        },
-      };
+      // Contar movimientos en tránsito (estado EN_TRANSITO en movimientos)
+      const [movEnTransito] = await pool.query<RowDataPacket[]>(`
+        SELECT COUNT(DISTINCT equipo_id) as cantidad
+        FROM equipos_movimientos
+        WHERE estado_movimiento = 'EN_TRANSITO' AND activo = true
+      `);
 
       res.json({
         success: true,
-        data: stats,
+        data: {
+          total: result[0].total || 0,
+          en_almacen: result[0].en_almacen || 0,
+          en_tiendas: result[0].en_tiendas || 0,
+          en_personas: result[0].en_personas || 0,
+          en_transito: movEnTransito[0].cantidad || 0,
+        },
       });
     } catch (error) {
-      console.error('Error al obtener estadísticas:', error);
+      console.error('Error al obtener equipos por ubicación:', error);
       res.status(500).json({
         success: false,
-        message: 'Error al obtener estadísticas del dashboard',
+        message: 'Error al obtener equipos por ubicación',
       });
     }
   }
 
   /**
-   * Obtener SKUs creados por mes (últimos 6 meses)
-   * GET /api/dashboard/skus-por-mes
+   * Obtener KPIs de equipos por estado
+   * GET /api/dashboard/equipos-estado
    */
-  static async getSkusPorMes(req: Request, res: Response): Promise<void> {
+  static async getEquiposPorEstado(req: Request, res: Response): Promise<void> {
+    try {
+      const [result] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          SUM(CASE WHEN estado_actual = 'OPERATIVO' THEN 1 ELSE 0 END) as operativo,
+          SUM(CASE WHEN estado_actual = 'POR_VALIDAR' THEN 1 ELSE 0 END) as por_validar,
+          SUM(CASE WHEN estado_actual = 'EN_GARANTIA' THEN 1 ELSE 0 END) as en_garantia,
+          SUM(CASE WHEN estado_actual = 'INOPERATIVO' THEN 1 ELSE 0 END) as inoperativo,
+          SUM(CASE WHEN estado_actual = 'BAJA' THEN 1 ELSE 0 END) as baja
+        FROM equipos
+        WHERE activo = true
+      `);
+
+      res.json({
+        success: true,
+        data: {
+          operativo: result[0].operativo || 0,
+          por_validar: result[0].por_validar || 0,
+          en_garantia: result[0].en_garantia || 0,
+          inoperativo: result[0].inoperativo || 0,
+          baja: result[0].baja || 0,
+        },
+      });
+    } catch (error) {
+      console.error('Error al obtener equipos por estado:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener equipos por estado',
+      });
+    }
+  }
+
+  // =============================================
+  // ACTIVIDAD DE MOVIMIENTOS
+  // =============================================
+
+  /**
+   * Obtener actividad de movimientos (hoy, mes actual, mes anterior)
+   * GET /api/dashboard/actividad-movimientos
+   */
+  static async getActividadMovimientos(req: Request, res: Response): Promise<void> {
+    try {
+      const [result] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          SUM(CASE WHEN DATE(fecha_creacion) = CURDATE() THEN 1 ELSE 0 END) as hoy,
+          SUM(CASE WHEN YEAR(fecha_creacion) = YEAR(CURDATE()) 
+                   AND MONTH(fecha_creacion) = MONTH(CURDATE()) THEN 1 ELSE 0 END) as mes_actual,
+          SUM(CASE WHEN YEAR(fecha_creacion) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+                   AND MONTH(fecha_creacion) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) THEN 1 ELSE 0 END) as mes_anterior
+        FROM equipos_movimientos
+        WHERE activo = true
+      `);
+
+      const mesActual = result[0].mes_actual || 0;
+      const mesAnterior = result[0].mes_anterior || 0;
+      
+      // Calcular porcentaje de crecimiento
+      let porcentajeCrecimiento = 0;
+      if (mesAnterior > 0) {
+        porcentajeCrecimiento = Math.round(((mesActual - mesAnterior) / mesAnterior) * 100);
+      } else if (mesActual > 0) {
+        porcentajeCrecimiento = 100;
+      }
+
+      res.json({
+        success: true,
+        data: {
+          hoy: result[0].hoy || 0,
+          mes_actual: mesActual,
+          mes_anterior: mesAnterior,
+          porcentaje_crecimiento: porcentajeCrecimiento,
+        },
+      });
+    } catch (error) {
+      console.error('Error al obtener actividad de movimientos:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener actividad de movimientos',
+      });
+    }
+  }
+
+  // =============================================
+  // ALERTAS OPERATIVAS
+  // =============================================
+
+  /**
+   * Obtener alertas operativas
+   * GET /api/dashboard/alertas-operativas
+   */
+  static async getAlertasOperativas(req: Request, res: Response): Promise<void> {
+    try {
+      // Movimientos en tránsito por más de 7 días
+      const [enTransitoLargo] = await pool.query<RowDataPacket[]>(`
+        SELECT COUNT(*) as cantidad
+        FROM equipos_movimientos
+        WHERE estado_movimiento = 'EN_TRANSITO'
+          AND activo = true
+          AND DATEDIFF(CURDATE(), fecha_salida) > 7
+      `);
+
+      // Movimientos pendientes
+      const [pendientes] = await pool.query<RowDataPacket[]>(`
+        SELECT COUNT(*) as cantidad
+        FROM equipos_movimientos
+        WHERE estado_movimiento = 'PENDIENTE'
+          AND activo = true
+      `);
+
+      // Equipos en almacén sin movimiento en más de 30 días
+      const [sinMovimiento] = await pool.query<RowDataPacket[]>(`
+        SELECT COUNT(*) as cantidad
+        FROM equipos e
+        WHERE e.activo = true
+          AND e.ubicacion_actual = 'ALMACEN'
+          AND NOT EXISTS (
+            SELECT 1 FROM equipos_movimientos em
+            WHERE em.equipo_id = e.id
+              AND em.activo = true
+              AND em.fecha_creacion >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+          )
+      `);
+
+      // Total de equipos en tránsito (cualquier tiempo)
+      const [enTransitoTotal] = await pool.query<RowDataPacket[]>(`
+        SELECT COUNT(*) as cantidad
+        FROM equipos_movimientos
+        WHERE estado_movimiento = 'EN_TRANSITO'
+          AND activo = true
+      `);
+
+      res.json({
+        success: true,
+        data: {
+          en_transito_largo: enTransitoLargo[0].cantidad || 0,
+          pendientes: pendientes[0].cantidad || 0,
+          sin_movimiento_30_dias: sinMovimiento[0].cantidad || 0,
+          en_transito_total: enTransitoTotal[0].cantidad || 0,
+        },
+      });
+    } catch (error) {
+      console.error('Error al obtener alertas operativas:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener alertas operativas',
+      });
+    }
+  }
+
+  // =============================================
+  // GRÁFICOS
+  // =============================================
+
+  /**
+   * Obtener movimientos por mes (últimos 6 meses)
+   * GET /api/dashboard/movimientos-por-mes
+   */
+  static async getMovimientosPorMes(req: Request, res: Response): Promise<void> {
     try {
       const periodo = Number(req.query.periodo) || 6;
 
-      const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT 
+      const [rows] = await pool.query<RowDataPacket[]>(`
+        SELECT 
           DATE_FORMAT(fecha_creacion, '%Y-%m') as mes,
           DATE_FORMAT(fecha_creacion, '%b %Y') as mes_nombre,
           COUNT(*) as cantidad
-        FROM skus
+        FROM equipos_movimientos
         WHERE fecha_creacion >= DATE_SUB(NOW(), INTERVAL ? MONTH)
+          AND activo = true
         GROUP BY mes, mes_nombre
-        ORDER BY mes ASC`,
-        [periodo]
-      );
-
-      const data: SkusPorMes = rows.map((row) => ({
-        mes: row.mes,
-        mes_nombre: row.mes_nombre,
-        cantidad: row.cantidad,
-      }));
+        ORDER BY mes ASC
+      `, [periodo]);
 
       res.json({
         success: true,
-        data,
+        data: rows,
       });
     } catch (error) {
-      console.error('Error al obtener SKUs por mes:', error);
+      console.error('Error al obtener movimientos por mes:', error);
       res.status(500).json({
         success: false,
-        message: 'Error al obtener datos de SKUs por mes',
+        message: 'Error al obtener movimientos por mes',
       });
     }
   }
 
   /**
-   * Obtener tiendas por socio
-   * GET /api/dashboard/tiendas-por-socio
+   * Obtener distribución de equipos por ubicación (para donut chart)
+   * GET /api/dashboard/distribucion-ubicacion
    */
-  static async getTiendasPorSocio(req: Request, res: Response): Promise<void> {
+  static async getDistribucionUbicacion(req: Request, res: Response): Promise<void> {
     try {
-      const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT 
-          s.razon_social as socio,
-          COUNT(t.id) as cantidad
-        FROM socio s
-        LEFT JOIN tienda t ON s.id = t.socio_id AND t.activo = 1
-        WHERE s.activo = 1
-        GROUP BY s.id, s.razon_social
+      const [rows] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          ubicacion_actual as ubicacion,
+          COUNT(*) as cantidad
+        FROM equipos
+        WHERE activo = true
+        GROUP BY ubicacion_actual
         ORDER BY cantidad DESC
-        LIMIT 10`
-      );
+      `);
 
-      const data: TiendasPorSocio[] = rows.map((row) => ({
-        socio: row.socio,
-        cantidad: row.cantidad,
-      }));
-
-      res.json({
-        success: true,
-        data,
-      });
-    } catch (error) {
-      console.error('Error al obtener tiendas por socio:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener tiendas por socio',
-      });
-    }
-  }
-
-  /**
-   * Obtener órdenes de compra por mes (últimos 6 meses)
-   * GET /api/dashboard/ordenes-por-mes
-   */
-  static async getOrdenesPorMes(req: Request, res: Response): Promise<void> {
-    try {
-      const periodo = Number(req.query.periodo) || 6;
-
-      const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT 
-          DATE_FORMAT(fecha_ingreso, '%Y-%m') as mes,
-          DATE_FORMAT(fecha_ingreso, '%b %Y') as mes_nombre,
-          COUNT(*) as cantidad
-        FROM ordenes_compra
-        WHERE fecha_ingreso >= DATE_SUB(NOW(), INTERVAL ? MONTH)
-        GROUP BY mes, mes_nombre
-        ORDER BY mes ASC`,
-        [periodo]
-      );
-
-      const data: OrdenesPorMes = rows.map((row) => ({
-        mes: row.mes,
-        mes_nombre: row.mes_nombre,
-        cantidad: row.cantidad,
-      }));
-
-      res.json({
-        success: true,
-        data,
-      });
-    } catch (error) {
-      console.error('Error al obtener órdenes por mes:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener órdenes por mes',
-      });
-    }
-  }
-
-  /**
-   * Obtener últimos SKUs creados
-   * GET /api/dashboard/ultimos-skus
-   */
-  static async getUltimosSKUs(req: Request, res: Response): Promise<void> {
-    try {
-      const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT 
-          codigo_sku,
-          descripcion_sku,
-          activo,
-          fecha_creacion
-        FROM skus
-        ORDER BY fecha_creacion DESC
-        LIMIT 5`
-      );
-
-      const data: UltimoSKU[] = rows.map((row) => ({
-        codigo_sku: row.codigo_sku,
-        descripcion_sku: row.descripcion_sku,
-        activo: row.activo,
-        fecha_creacion: row.fecha_creacion,
-      }));
-
-      res.json({
-        success: true,
-        data,
-      });
-    } catch (error) {
-      console.error('Error al obtener últimos SKUs:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener últimos SKUs',
-      });
-    }
-  }
-
-  /**
-   * Obtener últimas tiendas registradas
-   * GET /api/dashboard/ultimas-tiendas
-   */
-  static async getUltimasTiendas(req: Request, res: Response): Promise<void> {
-    try {
-      const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT 
-          t.pdv,
-          t.nombre_tienda,
-          s.razon_social as socio,
-          t.activo,
-          t.fecha_creacion
-        FROM tienda t
-        INNER JOIN socio s ON t.socio_id = s.id
-        ORDER BY t.fecha_creacion DESC
-        LIMIT 5`
-      );
-
-      const data: UltimaTienda[] = rows.map((row) => ({
-        pdv: row.pdv,
-        nombre_tienda: row.nombre_tienda,
-        socio: row.socio,
-        activo: row.activo,
-        fecha_creacion: row.fecha_creacion,
-      }));
-
-      res.json({
-        success: true,
-        data,
-      });
-    } catch (error) {
-      console.error('Error al obtener últimas tiendas:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener últimas tiendas',
-      });
-    }
-  }
-
-  /**
-   * Obtener últimas órdenes de compra
-   * GET /api/dashboard/ultimas-ordenes
-   */
-  static async getUltimasOrdenes(req: Request, res: Response): Promise<void> {
-    try {
-      const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT 
-          numero_orden,
-          detalle,
-          fecha_ingreso,
-          activo,
-          fecha_creacion
-        FROM ordenes_compra
-        ORDER BY fecha_creacion DESC
-        LIMIT 5`
-      );
-
-      const data: UltimaOrden[] = rows.map((row) => ({
-        numero_orden: row.numero_orden,
-        detalle: row.detalle,
-        fecha_ingreso: row.fecha_ingreso,
-        activo: row.activo,
-        fecha_creacion: row.fecha_creacion,
-      }));
-
-      res.json({
-        success: true,
-        data,
-      });
-    } catch (error) {
-      console.error('Error al obtener últimas órdenes:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener últimas órdenes',
-      });
-    }
-  }
-
-  // =============================================
-  // MÉTODOS NUEVOS CON TYPES
-  // =============================================
-
-  /**
-   * Obtener métricas de inventario (modelos, marcas, promedios)
-   * GET /api/dashboard/metricas-inventario
-   */
-  static async getInventoryMetrics(req: Request, res: Response): Promise<void> {
-    try {
-      const [
-        [modelosResult],
-        [marcasResult],
-        [subcategoriasResult],
-        [promedioModelosResult],
-        [promedioTiendasResult],
-      ] = await Promise.all([
-        pool.query<RowDataPacket[]>(
-          'SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM modelos'
-        ),
-        pool.query<RowDataPacket[]>(
-          'SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM marcas'
-        ),
-        pool.query<RowDataPacket[]>(
-          'SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM subcategorias'
-        ),
-        pool.query<RowDataPacket[]>(
-          `SELECT 
-            ROUND(COUNT(m.id) / COUNT(DISTINCT ma.id), 2) as promedio
-          FROM marcas ma
-          LEFT JOIN modelos m ON ma.id = m.marca_id AND m.activo = 1
-          WHERE ma.activo = 1`
-        ),
-        pool.query<RowDataPacket[]>(
-          `SELECT 
-            ROUND(COUNT(t.id) / COUNT(DISTINCT s.id), 2) as promedio
-          FROM socio s
-          LEFT JOIN tienda t ON s.id = t.socio_id AND t.activo = 1
-          WHERE s.activo = 1`
-        ),
-      ]);
-
-      const metrics: InventoryMetrics = {
-        modelos: {
-          total: modelosResult[0].total,
-          activos: modelosResult[0].activos,
-        },
-        marcas: {
-          total: marcasResult[0].total,
-          activos: marcasResult[0].activos,
-        },
-        subcategorias: {
-          total: subcategoriasResult[0].total,
-          activos: subcategoriasResult[0].activos,
-        },
-        promedioModelosPorMarca: promedioModelosResult[0].promedio || 0,
-        promedioTiendasPorSocio: promedioTiendasResult[0].promedio || 0,
-      };
-
-      res.json({
-        success: true,
-        data: metrics,
-      });
-    } catch (error) {
-      console.error('Error al obtener métricas de inventario:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener métricas de inventario',
-      });
-    }
-  }
-
-  /**
-   * Obtener métricas de cobertura del catálogo
-   * GET /api/dashboard/metricas-cobertura
-   */
-  static async getCoverageMetrics(req: Request, res: Response): Promise<void> {
-    try {
-      const [
-        [sociosConTiendasResult],
-        [sociosSinTiendasResult],
-        [categoriasConModelosResult],
-        [categoriasSinModelosResult],
-      ] = await Promise.all([
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(DISTINCT s.id) as total
-          FROM socio s
-          INNER JOIN tienda t ON s.id = t.socio_id AND t.activo = 1
-          WHERE s.activo = 1`
-        ),
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(*) as total
-          FROM socio s
-          WHERE s.activo = 1
-          AND NOT EXISTS (
-            SELECT 1 FROM tienda t 
-            WHERE t.socio_id = s.id AND t.activo = 1
-          )`
-        ),
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(DISTINCT c.id) as total
-          FROM categorias c
-          INNER JOIN subcategorias sc ON c.id = sc.categoria_id AND sc.activo = 1
-          INNER JOIN modelos m ON sc.id = m.subcategoria_id AND m.activo = 1
-          WHERE c.activo = 1`
-        ),
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(*) as total
-          FROM categorias c
-          WHERE c.activo = 1
-          AND NOT EXISTS (
-            SELECT 1 FROM subcategorias sc
-            INNER JOIN modelos m ON sc.id = m.subcategoria_id AND m.activo = 1
-            WHERE sc.categoria_id = c.id AND sc.activo = 1
-          )`
-        ),
-      ]);
-
-      const sociosConTiendas = sociosConTiendasResult[0].total;
-      const sociosSinTiendas = sociosSinTiendasResult[0].total;
-      const categoriasConModelos = categoriasConModelosResult[0].total;
-      const categoriasSinModelos = categoriasSinModelosResult[0].total;
-
-      const totalCategorias = categoriasConModelos + categoriasSinModelos;
-      const porcentajeCobertura = totalCategorias > 0 
-        ? Math.round((categoriasConModelos / totalCategorias) * 100) 
-        : 0;
-
-      const metrics: CoverageMetrics = {
-        sociosConTiendas,
-        sociosSinTiendas,
-        categoriasConModelos,
-        categoriasSinModelos,
-        porcentajeCoberturaCatalogo: porcentajeCobertura,
-      };
-
-      res.json({
-        success: true,
-        data: metrics,
-      });
-    } catch (error) {
-      console.error('Error al obtener métricas de cobertura:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener métricas de cobertura',
-      });
-    }
-  }
-
-  /**
-   * Obtener tasa de crecimiento mensual (SKUs, Órdenes, Modelos)
-   * GET /api/dashboard/tasa-crecimiento
-   */
-  static async getGrowthRate(req: Request, res: Response): Promise<void> {
-    try {
-      const [
-        [skusMesActual],
-        [skusMesAnterior],
-        [ordenesMesActual],
-        [ordenesMesAnterior],
-        [modelosMesActual],
-        [modelosMesAnterior],
-      ] = await Promise.all([
-        // SKUs mes actual
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(*) as total FROM skus 
-          WHERE YEAR(fecha_creacion) = YEAR(CURDATE()) 
-          AND MONTH(fecha_creacion) = MONTH(CURDATE())`
-        ),
-        // SKUs mes anterior
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(*) as total FROM skus 
-          WHERE YEAR(fecha_creacion) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
-          AND MONTH(fecha_creacion) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))`
-        ),
-        // Órdenes mes actual
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(*) as total FROM ordenes_compra 
-          WHERE YEAR(fecha_ingreso) = YEAR(CURDATE()) 
-          AND MONTH(fecha_ingreso) = MONTH(CURDATE())`
-        ),
-        // Órdenes mes anterior
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(*) as total FROM ordenes_compra 
-          WHERE YEAR(fecha_ingreso) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
-          AND MONTH(fecha_ingreso) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))`
-        ),
-        // Modelos mes actual
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(*) as total FROM modelos 
-          WHERE YEAR(fecha_creacion) = YEAR(CURDATE()) 
-          AND MONTH(fecha_creacion) = MONTH(CURDATE())`
-        ),
-        // Modelos mes anterior
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(*) as total FROM modelos 
-          WHERE YEAR(fecha_creacion) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
-          AND MONTH(fecha_creacion) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))`
-        ),
-      ]);
-
-      // Calcular porcentajes de crecimiento
-      const calcularCrecimiento = (actual: number, anterior: number): number => {
-        if (anterior === 0) return actual > 0 ? 100 : 0;
-        return Math.round(((actual - anterior) / anterior) * 100);
-      };
-
-      const growthRate: GrowthRate = {
-        skus: {
-          mesActual: skusMesActual[0].total,
-          mesAnterior: skusMesAnterior[0].total,
-          porcentajeCrecimiento: calcularCrecimiento(
-            skusMesActual[0].total,
-            skusMesAnterior[0].total
-          ),
-        },
-        ordenes: {
-          mesActual: ordenesMesActual[0].total,
-          mesAnterior: ordenesMesAnterior[0].total,
-          porcentajeCrecimiento: calcularCrecimiento(
-            ordenesMesActual[0].total,
-            ordenesMesAnterior[0].total
-          ),
-        },
-        modelos: {
-          mesActual: modelosMesActual[0].total,
-          mesAnterior: modelosMesAnterior[0].total,
-          porcentajeCrecimiento: calcularCrecimiento(
-            modelosMesActual[0].total,
-            modelosMesAnterior[0].total
-          ),
-        },
-      };
-
-      res.json({
-        success: true,
-        data: growthRate,
-      });
-    } catch (error) {
-      console.error('Error al obtener tasa de crecimiento:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener tasa de crecimiento',
-      });
-    }
-  }
-
-/**
-   * Obtener modelos registrados por mes (últimos 6 meses)
-   * GET /api/dashboard/modelos-por-mes
-   */
-  static async getModelosPorMes(req: Request, res: Response): Promise<void> {
-    try {
-      const periodo = Number(req.query.periodo) || 6;
-
-      const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT 
-          DATE_FORMAT(fecha_creacion, '%Y-%m') as mes,
-          DATE_FORMAT(fecha_creacion, '%b %Y') as mes_nombre,
-          COUNT(*) as cantidad
-        FROM modelos
-        WHERE fecha_creacion >= DATE_SUB(NOW(), INTERVAL ? MONTH)
-        GROUP BY mes, mes_nombre
-        ORDER BY mes ASC`,
-        [periodo]
-      );
-
-      const data: ModelosPorMes = rows.map((row) => ({
-        mes: row.mes,
-        mes_nombre: row.mes_nombre,
-        cantidad: row.cantidad,
-      }));
-
-      res.json({
-        success: true,
-        data,
-      });
-    } catch (error) {
-      console.error('Error al obtener modelos por mes:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener modelos por mes',
-      });
-    }
-  }
-
-  /**
-   * Obtener top categorías por cantidad de modelos
-   * GET /api/dashboard/top-categorias
-   */
-  static async getTopCategorias(req: Request, res: Response): Promise<void> {
-    try {
-      const limit = Number(req.query.limit) || 10;
-
-      const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT 
-          c.nombre as categoria,
-          COUNT(m.id) as cantidad_modelos
-        FROM categorias c
-        INNER JOIN subcategorias sc ON c.id = sc.categoria_id AND sc.activo = 1
-        INNER JOIN modelos m ON sc.id = m.subcategoria_id AND m.activo = 1
-        WHERE c.activo = 1
-        GROUP BY c.id, c.nombre
-        ORDER BY cantidad_modelos DESC
-        LIMIT ?`,
-        [limit]
-      );
-
-      // Calcular total para porcentajes
-      const total = rows.reduce((sum, row) => sum + row.cantidad_modelos, 0);
-
-      const data: TopCategoria[] = rows.map((row) => ({
-        categoria: row.categoria,
-        cantidad_modelos: row.cantidad_modelos,
-        porcentaje: total > 0 ? Math.round((row.cantidad_modelos / total) * 100) : 0,
-      }));
-
-      res.json({
-        success: true,
-        data,
-      });
-    } catch (error) {
-      console.error('Error al obtener top categorías:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener top categorías',
-      });
-    }
-  }
-
-  /**
-   * Obtener distribución de equipos por categoría (para pie chart)
-   * GET /api/dashboard/distribucion-equipos
-   */
-  static async getDistribucionEquipos(req: Request, res: Response): Promise<void> {
-    try {
-      const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT 
-          c.nombre as categoria,
-          COUNT(m.id) as cantidad
-        FROM categorias c
-        LEFT JOIN subcategorias sc ON c.id = sc.categoria_id AND sc.activo = 1
-        LEFT JOIN modelos m ON sc.id = m.subcategoria_id AND m.activo = 1
-        WHERE c.activo = 1
-        GROUP BY c.id, c.nombre
-        HAVING cantidad > 0
-        ORDER BY cantidad DESC`
-      );
-
-      // Calcular total para porcentajes
       const total = rows.reduce((sum, row) => sum + row.cantidad, 0);
 
-      const data: DistribucionEquipo[] = rows.map((row) => ({
+      const data = rows.map((row) => ({
+        ubicacion: row.ubicacion,
+        cantidad: row.cantidad,
+        porcentaje: total > 0 ? Math.round((row.cantidad / total) * 100) : 0,
+      }));
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error('Error al obtener distribución por ubicación:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener distribución por ubicación',
+      });
+    }
+  }
+
+  /**
+   * Obtener movimientos por tipo
+   * GET /api/dashboard/movimientos-por-tipo
+   */
+  static async getMovimientosPorTipo(req: Request, res: Response): Promise<void> {
+    try {
+      const [rows] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          tipo_movimiento,
+          COUNT(*) as cantidad
+        FROM equipos_movimientos
+        WHERE activo = true
+          AND fecha_creacion >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+        GROUP BY tipo_movimiento
+        ORDER BY cantidad DESC
+      `);
+
+      const tiposLabels: Record<string, string> = {
+        INGRESO_ALMACEN: 'Ingreso Almacén',
+        SALIDA_ASIGNACION: 'Asignación',
+        SALIDA_REEMPLAZO: 'Reemplazo',
+        SALIDA_PRESTAMO: 'Préstamo',
+        RETORNO_TIENDA: 'Retorno Tienda',
+        RETORNO_PERSONA: 'Retorno Persona',
+        TRANSFERENCIA_TIENDAS: 'Transferencia',
+        CAMBIO_ESTADO: 'Cambio Estado',
+      };
+
+      const data = rows.map((row) => ({
+        tipo: row.tipo_movimiento,
+        tipo_label: tiposLabels[row.tipo_movimiento] || row.tipo_movimiento,
+        cantidad: row.cantidad,
+      }));
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error('Error al obtener movimientos por tipo:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener movimientos por tipo',
+      });
+    }
+  }
+
+  /**
+   * Obtener equipos por categoría
+   * GET /api/dashboard/equipos-por-categoria
+   */
+  static async getEquiposPorCategoria(req: Request, res: Response): Promise<void> {
+    try {
+      const [rows] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          c.nombre as categoria,
+          COUNT(e.id) as cantidad
+        FROM equipos e
+        INNER JOIN modelos m ON e.modelo_id = m.id
+        INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+        INNER JOIN categorias c ON sc.categoria_id = c.id
+        WHERE e.activo = true
+        GROUP BY c.id, c.nombre
+        ORDER BY cantidad DESC
+      `);
+
+      const total = rows.reduce((sum, row) => sum + row.cantidad, 0);
+
+      const data = rows.map((row) => ({
         categoria: row.categoria,
         cantidad: row.cantidad,
         porcentaje: total > 0 ? Math.round((row.cantidad / total) * 100) : 0,
@@ -689,55 +362,106 @@ export class DashboardController {
         data,
       });
     } catch (error) {
-      console.error('Error al obtener distribución de equipos:', error);
+      console.error('Error al obtener equipos por categoría:', error);
       res.status(500).json({
         success: false,
-        message: 'Error al obtener distribución de equipos',
+        message: 'Error al obtener equipos por categoría',
       });
     }
   }
 
   /**
-   * Obtener top marcas por cantidad de modelos
-   * GET /api/dashboard/top-marcas
+   * Obtener top tiendas por cantidad de equipos
+   * GET /api/dashboard/top-tiendas-equipos
    */
-  static async getTopMarcas(req: Request, res: Response): Promise<void> {
+  static async getTopTiendasEquipos(req: Request, res: Response): Promise<void> {
     try {
       const limit = Number(req.query.limit) || 10;
-      const categoriaId = req.query.categoria_id ? Number(req.query.categoria_id) : null;
 
-      let query = `
+      const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT 
-          ma.nombre as marca,
-          COUNT(DISTINCT m.id) as cantidad_modelos,
-          COUNT(DISTINCT c.id) as categorias_cubiertas
-        FROM marcas ma
-        INNER JOIN modelos m ON ma.id = m.marca_id AND m.activo = 1
-        INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id AND sc.activo = 1
-        INNER JOIN categorias c ON sc.categoria_id = c.id AND c.activo = 1
-        WHERE ma.activo = 1
-      `;
-
-      const valores: any[] = [];
-
-      if (categoriaId) {
-        query += ' AND c.id = ?';
-        valores.push(categoriaId);
-      }
-
-      query += `
-        GROUP BY ma.id, ma.nombre
-        ORDER BY cantidad_modelos DESC
+          t.nombre_tienda as tienda,
+          t.pdv,
+          s.razon_social as socio,
+          COUNT(e.id) as cantidad_equipos
+        FROM tienda t
+        INNER JOIN socio s ON t.socio_id = s.id
+        LEFT JOIN equipos e ON e.tienda_id = t.id AND e.activo = true AND e.ubicacion_actual = 'TIENDA'
+        WHERE t.activo = true
+        GROUP BY t.id, t.nombre_tienda, t.pdv, s.razon_social
+        HAVING cantidad_equipos > 0
+        ORDER BY cantidad_equipos DESC
         LIMIT ?
-      `;
-      valores.push(limit);
+      `, [limit]);
 
-      const [rows] = await pool.query<RowDataPacket[]>(query, valores);
+      res.json({
+        success: true,
+        data: rows,
+      });
+    } catch (error) {
+      console.error('Error al obtener top tiendas:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener top tiendas',
+      });
+    }
+  }
 
-      const data: TopMarca[] = rows.map((row) => ({
-        marca: row.marca,
-        cantidad_modelos: row.cantidad_modelos,
-        categorias_cubiertas: row.categorias_cubiertas,
+  // =============================================
+  // TABLAS RECIENTES
+  // =============================================
+
+  /**
+   * Obtener últimos movimientos
+   * GET /api/dashboard/ultimos-movimientos
+   */
+  static async getUltimosMovimientos(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = Number(req.query.limit) || 5;
+
+      const [rows] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          em.id,
+          em.tipo_movimiento,
+          em.estado_movimiento,
+          em.ubicacion_origen,
+          em.ubicacion_destino,
+          em.persona_destino,
+          em.fecha_salida,
+          em.codigo_acta,
+          e.numero_serie,
+          e.inv_entel,
+          m.nombre as modelo,
+          ma.nombre as marca,
+          to_.nombre_tienda as tienda_origen,
+          td.nombre_tienda as tienda_destino,
+          u.nombre as usuario
+        FROM equipos_movimientos em
+        INNER JOIN equipos e ON em.equipo_id = e.id
+        INNER JOIN modelos m ON e.modelo_id = m.id
+        INNER JOIN marcas ma ON m.marca_id = ma.id
+        LEFT JOIN tienda to_ ON em.tienda_origen_id = to_.id
+        LEFT JOIN tienda td ON em.tienda_destino_id = td.id
+        INNER JOIN usuarios u ON em.usuario_id = u.id
+        WHERE em.activo = true
+        ORDER BY em.fecha_creacion DESC
+        LIMIT ?
+      `, [limit]);
+
+      const tiposLabels: Record<string, string> = {
+        INGRESO_ALMACEN: 'Ingreso',
+        SALIDA_ASIGNACION: 'Asignación',
+        SALIDA_REEMPLAZO: 'Reemplazo',
+        SALIDA_PRESTAMO: 'Préstamo',
+        RETORNO_TIENDA: 'Retorno Tienda',
+        RETORNO_PERSONA: 'Retorno Persona',
+        TRANSFERENCIA_TIENDAS: 'Transferencia',
+        CAMBIO_ESTADO: 'Cambio Estado',
+      };
+
+      const data = rows.map((row) => ({
+        ...row,
+        tipo_label: tiposLabels[row.tipo_movimiento] || row.tipo_movimiento,
       }));
 
       res.json({
@@ -745,246 +469,140 @@ export class DashboardController {
         data,
       });
     } catch (error) {
-      console.error('Error al obtener top marcas:', error);
+      console.error('Error al obtener últimos movimientos:', error);
       res.status(500).json({
         success: false,
-        message: 'Error al obtener top marcas',
+        message: 'Error al obtener últimos movimientos',
       });
     }
   }
 
   /**
-   * Obtener matriz de cobertura marca-categoría
-   * GET /api/dashboard/matriz-cobertura
+   * Obtener equipos en tránsito
+   * GET /api/dashboard/equipos-en-transito
    */
-  static async getMatrizCobertura(req: Request, res: Response): Promise<void> {
+  static async getEquiposEnTransito(req: Request, res: Response): Promise<void> {
     try {
-      // Obtener todas las categorías activas
-      const [categorias] = await pool.query<RowDataPacket[]>(
-        'SELECT id, nombre FROM categorias WHERE activo = 1 ORDER BY nombre'
-      );
-
-      // Obtener datos de cobertura
-      const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT 
+      const [rows] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          em.id as movimiento_id,
+          em.tipo_movimiento,
+          em.ubicacion_origen,
+          em.ubicacion_destino,
+          em.persona_destino,
+          em.fecha_salida,
+          em.codigo_acta,
+          DATEDIFF(CURDATE(), em.fecha_salida) as dias_en_transito,
+          e.id as equipo_id,
+          e.numero_serie,
+          e.inv_entel,
+          m.nombre as modelo,
           ma.nombre as marca,
-          c.nombre as categoria,
-          COUNT(m.id) as cantidad
-        FROM marcas ma
-        INNER JOIN modelos m ON ma.id = m.marca_id AND m.activo = 1
-        INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id AND sc.activo = 1
-        INNER JOIN categorias c ON sc.categoria_id = c.id AND c.activo = 1
-        WHERE ma.activo = 1
-        GROUP BY ma.nombre, c.nombre
-        ORDER BY ma.nombre, c.nombre`
-      );
+          to_.nombre_tienda as tienda_origen,
+          td.nombre_tienda as tienda_destino
+        FROM equipos_movimientos em
+        INNER JOIN equipos e ON em.equipo_id = e.id
+        INNER JOIN modelos m ON e.modelo_id = m.id
+        INNER JOIN marcas ma ON m.marca_id = ma.id
+        LEFT JOIN tienda to_ ON em.tienda_origen_id = to_.id
+        LEFT JOIN tienda td ON em.tienda_destino_id = td.id
+        WHERE em.estado_movimiento = 'EN_TRANSITO'
+          AND em.activo = true
+        ORDER BY em.fecha_salida ASC
+      `);
 
-      // Construir matriz
-      const matrizMap = new Map<string, MatrizCobertura>();
-
-      rows.forEach((row) => {
-        if (!matrizMap.has(row.marca)) {
-          matrizMap.set(row.marca, { marca: row.marca });
-        }
-        const marcaData = matrizMap.get(row.marca)!;
-        marcaData[row.categoria] = row.cantidad;
+      res.json({
+        success: true,
+        data: rows,
       });
-
-      // Asegurar que todas las categorías existan en cada marca (con 0 si no hay datos)
-      matrizMap.forEach((marcaData) => {
-        categorias.forEach((cat: any) => {
-          if (!(cat.nombre in marcaData)) {
-            marcaData[cat.nombre] = 0;
-          }
-        });
+    } catch (error) {
+      console.error('Error al obtener equipos en tránsito:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener equipos en tránsito',
       });
+    }
+  }
 
-      const data: MatrizCobertura[] = Array.from(matrizMap.values());
+  // =============================================
+  // RESUMEN DE CATÁLOGO (mantener los existentes)
+  // =============================================
+
+  /**
+   * Obtener resumen de catálogo (totales)
+   * GET /api/dashboard/resumen-catalogo
+   */
+  static async getResumenCatalogo(req: Request, res: Response): Promise<void> {
+    try {
+      const [
+        [skusResult],
+        [tiendasResult],
+        [sociosResult],
+        [categoriasResult],
+        [marcasResult],
+        [modelosResult],
+        [ordenesResult],
+      ] = await Promise.all([
+        pool.query<RowDataPacket[]>('SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM skus'),
+        pool.query<RowDataPacket[]>('SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM tienda'),
+        pool.query<RowDataPacket[]>('SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM socio'),
+        pool.query<RowDataPacket[]>('SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM categorias'),
+        pool.query<RowDataPacket[]>('SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM marcas'),
+        pool.query<RowDataPacket[]>('SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM modelos'),
+        pool.query<RowDataPacket[]>('SELECT COUNT(*) as total, SUM(activo = 1) as activos FROM ordenes_compra'),
+      ]);
 
       res.json({
         success: true,
         data: {
-          matriz: data,
-          categorias: categorias.map((c: any) => c.nombre),
+          skus: { total: skusResult[0].total, activos: skusResult[0].activos },
+          tiendas: { total: tiendasResult[0].total, activos: tiendasResult[0].activos },
+          socios: { total: sociosResult[0].total, activos: sociosResult[0].activos },
+          categorias: { total: categoriasResult[0].total, activos: categoriasResult[0].activos },
+          marcas: { total: marcasResult[0].total, activos: marcasResult[0].activos },
+          modelos: { total: modelosResult[0].total, activos: modelosResult[0].activos },
+          ordenes: { total: ordenesResult[0].total, activos: ordenesResult[0].activos },
         },
       });
     } catch (error) {
-      console.error('Error al obtener matriz de cobertura:', error);
+      console.error('Error al obtener resumen de catálogo:', error);
       res.status(500).json({
         success: false,
-        message: 'Error al obtener matriz de cobertura',
+        message: 'Error al obtener resumen de catálogo',
       });
     }
   }
 
   /**
-   * Obtener últimos modelos registrados
-   * GET /api/dashboard/ultimos-modelos
+   * Obtener tiendas por socio (mantener existente)
+   * GET /api/dashboard/tiendas-por-socio
    */
-  static async getUltimosModelos(req: Request, res: Response): Promise<void> {
+  static async getTiendasPorSocio(req: Request, res: Response): Promise<void> {
     try {
-      const limit = Number(req.query.limit) || 5;
-
-      const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT 
-          m.nombre,
-          ma.nombre as marca,
-          c.nombre as categoria,
-          sc.nombre as subcategoria,
-          m.fecha_creacion,
-          m.activo,
-          DATEDIFF(NOW(), m.fecha_creacion) as dias_desde_creacion
-        FROM modelos m
-        INNER JOIN marcas ma ON m.marca_id = ma.id
-        INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
-        INNER JOIN categorias c ON sc.categoria_id = c.id
-        ORDER BY m.fecha_creacion DESC
-        LIMIT ?`,
-        [limit]
-      );
-
-      const data: UltimoModelo[] = rows.map((row) => ({
-        nombre: row.nombre,
-        marca: row.marca,
-        categoria: row.categoria,
-        subcategoria: row.subcategoria,
-        fecha_creacion: row.fecha_creacion,
-        activo: row.activo,
-        es_nuevo: row.dias_desde_creacion <= 7,
-      }));
+      const [rows] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          s.razon_social as socio,
+          COUNT(t.id) as cantidad
+        FROM socio s
+        LEFT JOIN tienda t ON s.id = t.socio_id AND t.activo = 1
+        WHERE s.activo = 1
+        GROUP BY s.id, s.razon_social
+        ORDER BY cantidad DESC
+        LIMIT 10
+      `);
 
       res.json({
         success: true,
-        data,
+        data: rows,
       });
     } catch (error) {
-      console.error('Error al obtener últimos modelos:', error);
+      console.error('Error al obtener tiendas por socio:', error);
       res.status(500).json({
         success: false,
-        message: 'Error al obtener últimos modelos',
+        message: 'Error al obtener tiendas por socio',
       });
     }
   }
 
-  /**
-   * Obtener alertas e indicadores del dashboard
-   * GET /api/dashboard/alertas-indicadores
-   */
-  static async getAlertasIndicadores(req: Request, res: Response): Promise<void> {
-    try {
-      const [
-        [categoriasVaciasResult],
-        [sociosSinTiendasResult],
-        [marcasSinModelosResult],
-        [totalCategoriasResult],
-        [categoriasConModelosResult],
-        [totalModelosResult],
-        [topMarcasResult],
-        [totalMarcasResult],
-      ] = await Promise.all([
-        // Categorías sin modelos
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(*) as total
-          FROM categorias c
-          WHERE c.activo = 1
-          AND NOT EXISTS (
-            SELECT 1 FROM subcategorias sc
-            INNER JOIN modelos m ON sc.id = m.subcategoria_id AND m.activo = 1
-            WHERE sc.categoria_id = c.id AND sc.activo = 1
-          )`
-        ),
-        // Socios sin tiendas
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(*) as total
-          FROM socio s
-          WHERE s.activo = 1
-          AND NOT EXISTS (
-            SELECT 1 FROM tienda t 
-            WHERE t.socio_id = s.id AND t.activo = 1
-          )`
-        ),
-        // Marcas sin modelos
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(*) as total
-          FROM marcas ma
-          WHERE ma.activo = 1
-          AND NOT EXISTS (
-            SELECT 1 FROM modelos m 
-            WHERE m.marca_id = ma.id AND m.activo = 1
-          )`
-        ),
-        // Total categorías activas
-        pool.query<RowDataPacket[]>(
-          'SELECT COUNT(*) as total FROM categorias WHERE activo = 1'
-        ),
-        // Categorías con modelos
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(DISTINCT c.id) as total
-          FROM categorias c
-          INNER JOIN subcategorias sc ON c.id = sc.categoria_id AND sc.activo = 1
-          INNER JOIN modelos m ON sc.id = m.subcategoria_id AND m.activo = 1
-          WHERE c.activo = 1`
-        ),
-        // Total modelos activos
-        pool.query<RowDataPacket[]>(
-          'SELECT COUNT(*) as total FROM modelos WHERE activo = 1'
-        ),
-        // Top 3 marcas
-        pool.query<RowDataPacket[]>(
-  `SELECT COUNT(DISTINCT m.id) as total
-  FROM modelos m
-  INNER JOIN (
-    SELECT marca_id
-    FROM modelos
-    WHERE activo = 1
-    GROUP BY marca_id
-    ORDER BY COUNT(*) DESC
-    LIMIT 3
-  ) top_marcas ON m.marca_id = top_marcas.marca_id
-  WHERE m.activo = 1`
-),
-        // Total marcas con modelos activos
-        pool.query<RowDataPacket[]>(
-          `SELECT COUNT(DISTINCT marca_id) as total
-          FROM modelos
-          WHERE activo = 1`
-        ),
-      ]);
-
-      const totalCategorias = totalCategoriasResult[0].total;
-      const categoriasConModelos = categoriasConModelosResult[0].total;
-      const totalModelos = totalModelosResult[0].total;
-      const modelosTopMarcas = topMarcasResult[0].total;
-
-      const alertasIndicadores: AlertasIndicadores = {
-        alertas: {
-          categoriasVacias: categoriasVaciasResult[0].total,
-          sociosSinTiendas: sociosSinTiendasResult[0].total,
-          marcasSinModelos: marcasSinModelosResult[0].total,
-        },
-        indicadores: {
-          tasaCompletitudCatalogo:
-            totalCategorias > 0
-              ? Math.round((categoriasConModelos / totalCategorias) * 100)
-              : 0,
-          concentracionTopMarcas:
-            totalModelos > 0
-              ? Math.round((modelosTopMarcas / totalModelos) * 100)
-              : 0,
-          diversidadCatalogo: totalMarcasResult[0].total,
-        },
-      };
-
-      res.json({
-        success: true,
-        data: alertasIndicadores,
-      });
-    } catch (error) {
-      console.error('Error al obtener alertas e indicadores:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener alertas e indicadores',
-      });
-    }
-  }
+  
 }

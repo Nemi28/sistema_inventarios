@@ -7,6 +7,7 @@ import { Router } from 'express';
 import * as equipoController from '../controllers/equipos.controller';
 import { verificarToken, verificarRol } from '../middlewares/auth.middleware';
 import { validarCrearEquipo, validarActualizarEquipo } from '../middlewares/equipos.validators';
+import { exportarEquiposExcel } from '../controllers/equipos.export.controller';
 
 const router = Router();
 
@@ -28,6 +29,14 @@ router.get('/tiendas', verificarToken, equipoController.listarTiendas);
 
 // GET /api/equipos/personas - Listar equipos asignados a personas
 router.get('/personas', verificarToken, equipoController.listarPersonas);
+
+// GET /api/equipos/exportar - Exportar equipos a Excel
+router.get(
+  '/exportar',
+  verificarToken,
+  verificarRol('gestor', 'administrador'),
+  exportarEquiposExcel
+);
 
 // GET /api/equipos/:id - Obtener equipo por ID
 router.get('/:id', verificarToken, equipoController.obtenerPorId);

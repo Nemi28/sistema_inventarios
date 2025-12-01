@@ -1,6 +1,7 @@
 /**
- * Tipos e Interfaces para Dashboard - Frontend
+ * Tipos e Interfaces para Dashboard v2
  * Sistema de Gestión de Inventarios
+ * Enfocado en métricas operativas
  */
 
 // ============================================
@@ -14,7 +15,125 @@ export interface DashboardResponse<T> {
 }
 
 // ============================================
-// MÉTRICAS PRINCIPALES (YA EXISTENTES)
+// KPIS DE EQUIPOS
+// ============================================
+
+export interface EquiposPorUbicacion {
+  total: number;
+  en_almacen: number;
+  en_tiendas: number;
+  en_personas: number;
+  en_transito: number;
+}
+
+export interface EquiposPorEstado {
+  operativo: number;
+  por_validar: number;
+  en_garantia: number;
+  inoperativo: number;
+  baja: number;
+}
+
+// ============================================
+// ACTIVIDAD DE MOVIMIENTOS
+// ============================================
+
+export interface ActividadMovimientos {
+  hoy: number;
+  mes_actual: number;
+  mes_anterior: number;
+  porcentaje_crecimiento: number;
+}
+
+// ============================================
+// ALERTAS OPERATIVAS
+// ============================================
+
+export interface AlertasOperativas {
+  en_transito_largo: number;
+  pendientes: number;
+  sin_movimiento_30_dias: number;
+  en_transito_total: number;
+}
+
+// ============================================
+// GRÁFICOS
+// ============================================
+
+export interface MovimientoPorMes {
+  mes: string;
+  mes_nombre: string;
+  cantidad: number;
+}
+
+export interface DistribucionUbicacion {
+  ubicacion: string;
+  cantidad: number;
+  porcentaje: number;
+}
+
+export interface MovimientoPorTipo {
+  tipo: string;
+  tipo_label: string;
+  cantidad: number;
+}
+
+export interface EquipoPorCategoria {
+  categoria: string;
+  cantidad: number;
+  porcentaje: number;
+}
+
+export interface TopTiendaEquipos {
+  tienda: string;
+  pdv: string;
+  socio: string;
+  cantidad_equipos: number;
+}
+
+// ============================================
+// TABLAS RECIENTES
+// ============================================
+
+export interface UltimoMovimiento {
+  id: number;
+  tipo_movimiento: string;
+  tipo_label: string;
+  estado_movimiento: string;
+  ubicacion_origen: string;
+  ubicacion_destino: string;
+  persona_destino?: string;
+  fecha_salida: string;
+  codigo_acta?: string;
+  numero_serie?: string;
+  inv_entel?: string;
+  modelo: string;
+  marca: string;
+  tienda_origen?: string;
+  tienda_destino?: string;
+  usuario: string;
+}
+
+export interface EquipoEnTransito {
+  movimiento_id: number;
+  tipo_movimiento: string;
+  ubicacion_origen: string;
+  ubicacion_destino: string;
+  persona_destino?: string;
+  fecha_salida: string;
+  codigo_acta?: string;
+  dias_en_transito: number;
+  equipo_id: number;
+  numero_serie?: string;
+  inv_entel?: string;
+  modelo: string;
+  marca: string;
+  tienda_origen?: string;
+  tienda_destino?: string;
+}
+
+// ============================================
+// RESUMEN DE CATÁLOGO
 // ============================================
 
 export interface StatsBase {
@@ -22,74 +141,15 @@ export interface StatsBase {
   activos: number;
 }
 
-export interface DashboardStats {
+export interface ResumenCatalogo {
   skus: StatsBase;
   tiendas: StatsBase;
   socios: StatsBase;
-  ordenes: StatsBase;
   categorias: StatsBase;
-}
-
-// ============================================
-// MÉTRICAS ADICIONALES DE INVENTARIO (NUEVAS)
-// ============================================
-
-export interface InventoryMetrics {
-  modelos: StatsBase;
   marcas: StatsBase;
-  subcategorias: StatsBase;
-  promedioModelosPorMarca: number;
-  promedioTiendasPorSocio: number;
+  modelos: StatsBase;
+  ordenes: StatsBase;
 }
-
-// ============================================
-// MÉTRICAS DE COBERTURA (NUEVAS)
-// ============================================
-
-export interface CoverageMetrics {
-  sociosConTiendas: number;
-  sociosSinTiendas: number;
-  categoriasConModelos: number;
-  categoriasSinModelos: number;
-  porcentajeCoberturaCatalogo: number;
-}
-
-// ============================================
-// TASA DE CRECIMIENTO (NUEVAS)
-// ============================================
-
-export interface MesComparacion {
-  mesActual: number;
-  mesAnterior: number;
-  porcentajeCrecimiento: number;
-}
-
-export interface GrowthRate {
-  skus: MesComparacion;
-  ordenes: MesComparacion;
-  modelos: MesComparacion;
-}
-
-// ============================================
-// DATOS PARA GRÁFICOS TEMPORALES
-// ============================================
-
-export interface ChartDataMensual {
-  mes: string;
-  mes_nombre: string;
-  cantidad: number;
-}
-
-// Alias para compatibilidad con código existente
-export type ChartData = ChartDataMensual;
-
-export type SkusPorMes = ChartDataMensual[];
-export type OrdenesPorMes = ChartDataMensual[];
-export type ModelosPorMes = ChartDataMensual[];
-
-// ============================================
-// TIENDAS POR SOCIO
-// ============================================
 
 export interface TiendasPorSocio {
   socio: string;
@@ -97,110 +157,17 @@ export interface TiendasPorSocio {
 }
 
 // ============================================
-// GRÁFICOS NUEVOS
+// TIPO UNIVERSAL PARA DATOS DE GRÁFICOS (RECHARTS)
 // ============================================
 
-export interface TopCategoria {
-  categoria: string;
-  cantidad_modelos: number;
-  porcentaje: number;
-}
-
-export interface DistribucionEquipo {
-  categoria: string;
+export interface DistribucionUbicacion {
+  ubicacion: string;
   cantidad: number;
   porcentaje: number;
 }
 
-export interface TopMarca {
-  marca: string;
-  cantidad_modelos: number;
-  categorias_cubiertas: number;
-}
-
-export interface MatrizCobertura {
-  marca: string;
-  [categoria: string]: number | string;
-}
-
-export interface MatrizCoberturaResponse {
-  matriz: MatrizCobertura[];
-  categorias: string[];
-}
-
-// ============================================
-// ACTIVIDAD RECIENTE
-// ============================================
-
-export interface UltimoSKU {
-  codigo_sku: string;
-  descripcion_sku: string;
-  activo: boolean;
-  fecha_creacion: string;
-}
-
-export interface UltimoSKUEnhanced extends UltimoSKU {
-  categoria?: string;
-  dias_desde_creacion: number;
-}
-
-export interface UltimaTienda {
-  pdv: string;
-  nombre_tienda: string;
-  socio: string;
-  activo: boolean;
-  fecha_creacion: string;
-}
-
-export interface UltimaOrden {
-  numero_orden: string;
-  detalle: string;
-  fecha_ingreso: string;
-  activo: boolean;
-  fecha_creacion: string;
-}
-
-export interface UltimaOrdenEnhanced extends UltimaOrden {
-  dias_desde_ingreso: number;
-}
-
-export interface UltimoModelo {
-  nombre: string;
-  marca: string;
+export interface EquiposPorCategoria {
   categoria: string;
-  subcategoria: string;
-  fecha_creacion: string;
-  activo: boolean;
-  es_nuevo: boolean;
-}
-
-// ============================================
-// ALERTAS E INDICADORES
-// ============================================
-
-export interface Alertas {
-  categoriasVacias: number;
-  sociosSinTiendas: number;
-  marcasSinModelos: number;
-}
-
-export interface Indicadores {
-  tasaCompletitudCatalogo: number;
-  concentracionTopMarcas: number;
-  diversidadCatalogo: number;
-}
-
-export interface AlertasIndicadores {
-  alertas: Alertas;
-  indicadores: Indicadores;
-}
-
-// ============================================
-// FILTROS
-// ============================================
-
-export interface FiltrosDashboard {
-  periodo?: 3 | 6 | 12;
-  categoria_id?: number;
-  limit?: number;
+  cantidad: number;
+  porcentaje: number;
 }

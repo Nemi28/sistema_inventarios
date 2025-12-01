@@ -70,6 +70,7 @@ export interface FiltrosMovimiento extends PaginacionParams {
 
 /**
  * Crear movimientos (uno o varios equipos con transacción atómica)
+ * INCLUYE VALIDACIÓN DE UBICACIÓN
  */
 export const crearMovimientos = async (
   equipos_ids: number[],
@@ -79,6 +80,55 @@ export const crearMovimientos = async (
 
   try {
     await connection.beginTransaction();
+
+    // ✅ VALIDACIÓN: Verificar que todos los equipos estén en la ubicación origen esperada
+    const equiposConUbicacionIncorrecta: { id: number; serie: string; ubicacion_actual: string }[] = [];
+    
+    for (const equipo_id of equipos_ids) {
+      const [equipoRows] = await connection.execute<RowDataPacket[]>(
+        `SELECT id, numero_serie, ubicacion_actual, tienda_id FROM equipos WHERE id = ? AND activo = true`,
+        [equipo_id]
+      );
+
+      if (equipoRows.length === 0) {
+        throw new Error(`Equipo con ID ${equipo_id} no encontrado o está inactivo`);
+      }
+
+      const equipo = equipoRows[0];
+
+      // Validar ubicación
+      if (equipo.ubicacion_actual !== datosMovimiento.ubicacion_origen) {
+        equiposConUbicacionIncorrecta.push({
+          id: equipo.id,
+          serie: equipo.numero_serie || `ID: ${equipo.id}`,
+          ubicacion_actual: equipo.ubicacion_actual,
+        });
+      }
+
+      // Validar tienda origen si aplica
+      if (
+        datosMovimiento.ubicacion_origen === 'TIENDA' &&
+        datosMovimiento.tienda_origen_id &&
+        equipo.tienda_id !== datosMovimiento.tienda_origen_id
+      ) {
+        equiposConUbicacionIncorrecta.push({
+          id: equipo.id,
+          serie: equipo.numero_serie || `ID: ${equipo.id}`,
+          ubicacion_actual: `TIENDA (ID: ${equipo.tienda_id})`,
+        });
+      }
+    }
+
+    // Si hay equipos con ubicación incorrecta, rechazar la operación
+    if (equiposConUbicacionIncorrecta.length > 0) {
+      const detalles = equiposConUbicacionIncorrecta
+        .map((e) => `${e.serie} (está en ${e.ubicacion_actual})`)
+        .join(', ');
+      
+      throw new Error(
+        `Los siguientes equipos no están en la ubicación esperada (${datosMovimiento.ubicacion_origen}): ${detalles}`
+      );
+    }
 
     const movimientosIds: number[] = [];
 
@@ -354,4 +404,180 @@ export const actualizarEstadoMovimiento = async (
   const [resultado] = await pool.execute<ResultSetHeader>(query, valores);
 
   return resultado.affectedRows > 0;
+};
+
+/**
+ * Validar ubicación de equipos antes de mover
+ * Retorna lista de equipos con ubicación incorrecta
+ */
+export const validarUbicacionEquipos = async (
+  equipos_ids: number[],
+  ubicacion_esperada: 'ALMACEN' | 'TIENDA' | 'PERSONA',
+  tienda_id?: number
+): Promise<{
+  valido: boolean;
+  equipos_invalidos: { id: number; serie: string; ubicacion_actual: string; tienda_actual?: number }[];
+}> => {
+  const equiposInvalidos: { id: number; serie: string; ubicacion_actual: string; tienda_actual?: number }[] = [];
+
+  for (const equipo_id of equipos_ids) {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT id, numero_serie, ubicacion_actual, tienda_id FROM equipos WHERE id = ? AND activo = true`,
+      [equipo_id]
+    );
+
+    if (rows.length === 0) {
+      equiposInvalidos.push({
+        id: equipo_id,
+        serie: `ID: ${equipo_id}`,
+        ubicacion_actual: 'NO ENCONTRADO',
+      });
+      continue;
+    }
+
+    const equipo = rows[0];
+
+    // Validar ubicación principal
+    if (equipo.ubicacion_actual !== ubicacion_esperada) {
+      equiposInvalidos.push({
+        id: equipo.id,
+        serie: equipo.numero_serie || `ID: ${equipo.id}`,
+        ubicacion_actual: equipo.ubicacion_actual,
+        tienda_actual: equipo.tienda_id,
+      });
+      continue;
+    }
+
+    // Si es TIENDA, validar que esté en la tienda correcta
+    if (ubicacion_esperada === 'TIENDA' && tienda_id && equipo.tienda_id !== tienda_id) {
+      equiposInvalidos.push({
+        id: equipo.id,
+        serie: equipo.numero_serie || `ID: ${equipo.id}`,
+        ubicacion_actual: `TIENDA (diferente)`,
+        tienda_actual: equipo.tienda_id,
+      });
+    }
+  }
+
+  return {
+    valido: equiposInvalidos.length === 0,
+    equipos_invalidos: equiposInvalidos,
+  };
+};
+
+/**
+ * Obtener movimientos para exportar (sin paginación)
+ * Máximo 5000 registros para evitar problemas de memoria
+ */
+export const obtenerMovimientosParaExportar = async (filtros: FiltrosMovimiento = {}) => {
+  const { campo, direccion } = validarOrdenamiento(
+    filtros.ordenar_por,
+    filtros.orden,
+    ['em.fecha_salida', 'em.fecha_creacion', 'em.tipo_movimiento', 'e.numero_serie', 'e.inv_entel']
+  );
+
+  const condiciones: string[] = ['em.activo = true'];
+  const valores: any[] = [];
+
+  // Búsqueda global
+  if (filtros.busqueda && filtros.busqueda.trim() !== '') {
+    const termino = `%${filtros.busqueda.trim()}%`;
+    condiciones.push(`(
+      e.numero_serie LIKE ? OR 
+      e.inv_entel LIKE ? OR 
+      m.nombre LIKE ? OR 
+      ma.nombre LIKE ? OR
+      em.codigo_acta LIKE ? OR
+      em.ticket_helix LIKE ? OR
+      em.persona_origen LIKE ? OR
+      em.persona_destino LIKE ? OR
+      em.tipo_movimiento LIKE ? OR
+      to_.nombre_tienda LIKE ? OR
+      td.nombre_tienda LIKE ? OR
+      u.nombre LIKE ?
+    )`);
+    valores.push(termino, termino, termino, termino, termino, termino, termino, termino, termino, termino, termino, termino);
+  }
+
+  if (filtros.equipo_id) {
+    condiciones.push('em.equipo_id = ?');
+    valores.push(filtros.equipo_id);
+  }
+
+  if (filtros.tipo_movimiento) {
+    condiciones.push('em.tipo_movimiento = ?');
+    valores.push(filtros.tipo_movimiento);
+  }
+
+  if (filtros.estado_movimiento) {
+    condiciones.push('em.estado_movimiento = ?');
+    valores.push(filtros.estado_movimiento);
+  }
+
+  if (filtros.ubicacion_origen) {
+    condiciones.push('em.ubicacion_origen = ?');
+    valores.push(filtros.ubicacion_origen);
+  }
+
+  if (filtros.ubicacion_destino) {
+    condiciones.push('em.ubicacion_destino = ?');
+    valores.push(filtros.ubicacion_destino);
+  }
+
+  if (filtros.tienda_origen_id) {
+    condiciones.push('em.tienda_origen_id = ?');
+    valores.push(filtros.tienda_origen_id);
+  }
+
+  if (filtros.tienda_destino_id) {
+    condiciones.push('em.tienda_destino_id = ?');
+    valores.push(filtros.tienda_destino_id);
+  }
+
+  if (filtros.codigo_acta) {
+    condiciones.push('em.codigo_acta = ?');
+    valores.push(filtros.codigo_acta);
+  }
+
+  if (filtros.fecha_desde) {
+    condiciones.push('em.fecha_salida >= ?');
+    valores.push(filtros.fecha_desde);
+  }
+
+  if (filtros.fecha_hasta) {
+    condiciones.push('em.fecha_salida <= ?');
+    valores.push(filtros.fecha_hasta);
+  }
+
+  const whereClause = condiciones.join(' AND ');
+
+  const query = `
+    SELECT 
+      em.*,
+      e.numero_serie as equipo_serie,
+      e.inv_entel as equipo_inv_entel,
+      m.nombre as equipo_modelo,
+      ma.nombre as equipo_marca,
+      c.nombre as equipo_categoria,
+      sc.nombre as equipo_subcategoria,
+      to_.nombre_tienda as tienda_origen_nombre,
+      td.nombre_tienda as tienda_destino_nombre,
+      u.nombre as usuario_nombre
+    FROM equipos_movimientos em
+    INNER JOIN equipos e ON em.equipo_id = e.id
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    LEFT JOIN tienda to_ ON em.tienda_origen_id = to_.id
+    LEFT JOIN tienda td ON em.tienda_destino_id = td.id
+    INNER JOIN usuarios u ON em.usuario_id = u.id
+    WHERE ${whereClause}
+    ORDER BY ${campo} ${direccion}
+    LIMIT 5000
+  `;
+
+  const [movimientos] = await pool.execute<RowDataPacket[]>(query, valores);
+
+  return movimientos;
 };

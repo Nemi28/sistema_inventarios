@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Store, TrendingUp } from 'lucide-react';
+import { Store, TrendingUp, Download } from 'lucide-react';
 import { SearchBar } from '@/components/common/SearchBar';
 import { DataTable } from '@/components/common/DataTable';
 import { Pagination } from '@/components/common/Pagination';
@@ -13,13 +13,17 @@ import { EquipoDetalleModal } from './EquipoDetalleModal';
 import { useEquiposTiendas } from '../hooks/useEquiposTiendas';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useDebounce } from '@/hooks/useDebounce';
+import { usePermissions } from '@/hooks/usePermissions';
 import { columnsTiendas } from './columnsTiendas';
 import { Equipo } from '../types';
 import { RowSelectionState } from '@tanstack/react-table';
+import { exportarEquiposExcel } from '../services/equipos.export.service';
+import { toast } from 'sonner';
 
 export const TiendasInventarioPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
   
   // Debounce para búsqueda
   const debouncedSearch = useDebounce(searchTerm, 400);
@@ -49,6 +53,9 @@ export const TiendasInventarioPage = () => {
 
   // Modal de detalle
   const [equipoParaDetalle, setEquipoParaDetalle] = useState<Equipo | null>(null);
+
+  const { hasPermission } = usePermissions();
+  const canExport = hasPermission(['gestor', 'administrador']);
 
   const { data, isLoading, refetch } = useEquiposTiendas({
     page,
@@ -99,6 +106,27 @@ export const TiendasInventarioPage = () => {
   // Handler para retornar a almacén
   const handleRetornarAlmacen = (equipo: Equipo) => {
     setEquipoParaRetornar(equipo);
+  };
+
+  // Exportar a Excel
+  const handleExportar = async () => {
+    try {
+      setIsExporting(true);
+      await exportarEquiposExcel({
+        ubicacion: 'TIENDA',
+        categoria_id: categoriaId,
+        subcategoria_id: subcategoriaId,
+        marca_id: marcaId,
+        modelo_id: modeloId,
+        busqueda: debouncedSearch || undefined,
+      });
+      toast.success('Excel exportado correctamente');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      toast.error('Error al exportar el archivo');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Manejar cambios en la selección
@@ -165,6 +193,17 @@ export const TiendasInventarioPage = () => {
             </p>
           </div>
         </div>
+        {canExport && (
+          <Button
+            variant="outline"
+            onClick={handleExportar}
+            disabled={isExporting || isLoading}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            {isExporting ? 'Exportando...' : 'Exportar Excel'}
+          </Button>
+        )}
       </div>
 
       {/* Búsqueda */}

@@ -8,68 +8,66 @@ const router = Router();
 router.use(verificarToken);
 
 // =============================================
-// RUTAS EXISTENTES - Estadísticas y Gráficos
+// KPIS DE EQUIPOS (NUEVO)
 // =============================================
 
-// Estadísticas generales
-router.get('/stats', DashboardController.getStats);
+// Equipos por ubicación (Almacén, Tiendas, Personas, En Tránsito)
+router.get('/equipos-ubicacion', DashboardController.getEquiposPorUbicacion);
 
-// Gráficos temporales (con soporte de parámetro ?periodo=3|6|12)
-router.get('/skus-por-mes', DashboardController.getSkusPorMes);
-router.get('/ordenes-por-mes', DashboardController.getOrdenesPorMes);
+// Equipos por estado (Operativo, Por Validar, En Garantía, Inoperativo, Baja)
+router.get('/equipos-estado', DashboardController.getEquiposPorEstado);
 
-// Gráfico de tiendas por socio
+// =============================================
+// ACTIVIDAD DE MOVIMIENTOS (NUEVO)
+// =============================================
+
+// Actividad de movimientos (hoy, mes actual, crecimiento)
+router.get('/actividad-movimientos', DashboardController.getActividadMovimientos);
+
+// =============================================
+// ALERTAS OPERATIVAS (NUEVO)
+// =============================================
+
+// Alertas operativas (en tránsito largo, pendientes, sin movimiento)
+router.get('/alertas-operativas', DashboardController.getAlertasOperativas);
+
+// =============================================
+// GRÁFICOS (NUEVO)
+// =============================================
+
+// Movimientos por mes (últimos 6 meses)
+router.get('/movimientos-por-mes', DashboardController.getMovimientosPorMes);
+
+// Distribución de equipos por ubicación (donut)
+router.get('/distribucion-ubicacion', DashboardController.getDistribucionUbicacion);
+
+// Movimientos por tipo
+router.get('/movimientos-por-tipo', DashboardController.getMovimientosPorTipo);
+
+// Equipos por categoría
+router.get('/equipos-por-categoria', DashboardController.getEquiposPorCategoria);
+
+// Top tiendas por cantidad de equipos
+router.get('/top-tiendas-equipos', DashboardController.getTopTiendasEquipos);
+
+// =============================================
+// TABLAS RECIENTES (NUEVO)
+// =============================================
+
+// Últimos movimientos
+router.get('/ultimos-movimientos', DashboardController.getUltimosMovimientos);
+
+// Equipos en tránsito
+router.get('/equipos-en-transito', DashboardController.getEquiposEnTransito);
+
+// =============================================
+// RESUMEN DE CATÁLOGO (MANTENER)
+// =============================================
+
+// Resumen de catálogo (totales de SKUs, tiendas, socios, etc.)
+router.get('/resumen-catalogo', DashboardController.getResumenCatalogo);
+
+// Tiendas por socio
 router.get('/tiendas-por-socio', DashboardController.getTiendasPorSocio);
-
-// Actividad reciente
-router.get('/ultimos-skus', DashboardController.getUltimosSKUs);
-router.get('/ultimas-tiendas', DashboardController.getUltimasTiendas);
-router.get('/ultimas-ordenes', DashboardController.getUltimasOrdenes);
-
-// =============================================
-// RUTAS NUEVAS - Métricas Adicionales
-// =============================================
-
-// Métricas de inventario (modelos, marcas, promedios)
-router.get('/metricas-inventario', DashboardController.getInventoryMetrics);
-
-// Métricas de cobertura del catálogo
-router.get('/metricas-cobertura', DashboardController.getCoverageMetrics);
-
-// Tasa de crecimiento mensual
-router.get('/tasa-crecimiento', DashboardController.getGrowthRate);
-
-// =============================================
-// RUTAS NUEVAS - Gráficos Adicionales
-// =============================================
-
-// Modelos registrados por mes (con soporte de parámetro ?periodo=3|6|12)
-router.get('/modelos-por-mes', DashboardController.getModelosPorMes);
-
-// Top categorías por cantidad de modelos (con parámetro ?limit=5|10|15)
-router.get('/top-categorias', DashboardController.getTopCategorias);
-
-// Distribución de equipos por categoría (para pie/donut chart)
-router.get('/distribucion-equipos', DashboardController.getDistribucionEquipos);
-
-// Top marcas del catálogo (con parámetros ?limit=10&categoria_id=1)
-router.get('/top-marcas', DashboardController.getTopMarcas);
-
-// Matriz de cobertura marca-categoría (heatmap)
-router.get('/matriz-cobertura', DashboardController.getMatrizCobertura);
-
-// =============================================
-// RUTAS NUEVAS - Actividad Reciente
-// =============================================
-
-// Últimos modelos registrados (con parámetro ?limit=5)
-router.get('/ultimos-modelos', DashboardController.getUltimosModelos);
-
-// =============================================
-// RUTAS NUEVAS - Alertas e Indicadores
-// =============================================
-
-// Alertas e indicadores del dashboard
-router.get('/alertas-indicadores', DashboardController.getAlertasIndicadores);
 
 export default router;

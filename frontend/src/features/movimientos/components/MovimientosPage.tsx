@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Download } from 'lucide-react';
 import { SearchBar } from '@/components/common/SearchBar';
 import { DataTable } from '@/components/common/DataTable';
 import { Pagination } from '@/components/common/Pagination';
+import { Button } from '@/components/ui/button';
 import { useMovimientos } from '../hooks/useMovimientos';
 import { columnsMovimientos } from './columns';
 import { MovimientoCard } from './MovimientoCard';
 import { ActualizarEstadoModal } from './ActualizarEstadoModal';
 import { Movimiento } from '../types';
 import { useDebounce } from '@/hooks/useDebounce';
+import { exportarMovimientosExcel } from '../services/movimientos.service';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +22,7 @@ import {
 export const MovimientosPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
   
   // Debounce para búsqueda
   const debouncedSearch = useDebounce(searchTerm, 400);
@@ -32,7 +36,7 @@ export const MovimientosPage = () => {
   const { data, isLoading } = useMovimientos({
     page,
     limit: 20,
-    busqueda: debouncedSearch || undefined, // ← Conectar búsqueda
+    busqueda: debouncedSearch || undefined,
     ordenar_por: 'em.fecha_salida',
     orden: 'DESC',
   });
@@ -55,6 +59,22 @@ export const MovimientosPage = () => {
     setMovimientoParaConfirmar(movimiento);
   };
 
+  // Handler para exportar Excel
+  const handleExportarExcel = async () => {
+    try {
+      setIsExporting(true);
+      await exportarMovimientosExcel({
+        busqueda: debouncedSearch || undefined,
+      });
+      toast.success('Archivo Excel descargado correctamente');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      toast.error('Error al exportar los movimientos');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -70,6 +90,17 @@ export const MovimientosPage = () => {
             </p>
           </div>
         </div>
+
+        {/* Botón Exportar */}
+        <Button
+          variant="outline"
+          onClick={handleExportarExcel}
+          disabled={isExporting || isLoading}
+          className="gap-2"
+        >
+          <Download className="h-4 w-4" />
+          {isExporting ? 'Exportando...' : 'Exportar Excel'}
+        </Button>
       </div>
 
       {/* Búsqueda */}
