@@ -1,7 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, CheckCircle, Clock, XCircle, AlertCircle, ClipboardCheck } from 'lucide-react';
+import { Eye, CheckCircle, Clock, XCircle, AlertCircle, ClipboardCheck, Pencil } from 'lucide-react';
 import { Movimiento } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -193,15 +193,17 @@ export const columnsMovimientos: ColumnDef<Movimiento>[] = [
   {
     id: 'acciones',
     header: 'Acciones',
-    size: 100,
+    size: 120,
     cell: ({ row, table }) => {
       const item = row.original;
       const meta = table.options.meta as {
         onView?: (movimiento: Movimiento) => void;
+        onEdit?: (movimiento: Movimiento) => void;
         onConfirmarRecepcion?: (movimiento: Movimiento) => void;
       };
 
       const esEnTransito = item.estado_movimiento === 'EN_TRANSITO';
+      const esCancelado = item.estado_movimiento === 'CANCELADO';
 
       return (
         <div className="flex items-center gap-1">
@@ -215,12 +217,31 @@ export const columnsMovimientos: ColumnDef<Movimiento>[] = [
                 meta.onView(item);
               }
             }}
-            className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
+            className="h-7 w-7 p-0 hover:bg-purple-50 hover:text-purple-600"
             title="Ver Detalle"
             type="button"
           >
             <Eye className="h-3.5 w-3.5" />
           </Button>
+
+          {/* Botón Editar - No mostrar si está cancelado */}
+          {!esCancelado && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (meta?.onEdit) {
+                  meta.onEdit(item);
+                }
+              }}
+              className="h-7 w-7 p-0 hover:bg-amber-50 hover:text-amber-600"
+              title="Editar Movimiento"
+              type="button"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          )}
 
           {/* Botón Confirmar Recepción - Solo si está EN_TRANSITO */}
           {esEnTransito && (

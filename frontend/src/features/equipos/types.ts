@@ -14,8 +14,6 @@ export interface Equipo {
   hostname?: string;
   posicion_tienda?: string;
   area_tienda?: string;
-  responsable_socio?: string;
-  responsable_entel?: string;
   es_accesorio?: boolean;
   equipo_principal_id?: number;
   observaciones?: string;
@@ -33,15 +31,18 @@ export interface Equipo {
   orden_numero?: string;
   equipo_principal_serie?: string;
   
-  // ← NUEVOS: Datos para Vista ALMACÉN
+  // Datos para Vista ALMACÉN
   ultima_ubicacion_origen?: string;
   
-  // ← NUEVOS: Datos para Vista TIENDAS
+  // Datos para Vista TIENDAS
   nombre_tienda?: string;
   pdv?: string;
   socio_nombre?: string;
+  // Responsables ahora vienen de la tienda (JOIN)
+  responsable_socio?: string;
+  responsable_entel?: string;
   
-  // ← NUEVOS: Datos para Vista PERSONAS
+  // Datos para Vista PERSONAS
   persona_asignada?: string;
   fecha_asignacion?: string;
   codigo_acta?: string;

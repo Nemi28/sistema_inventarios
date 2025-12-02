@@ -476,3 +476,109 @@ export const exportarExcel = async (req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * Controladores para actualizar y cancelar movimientos
+ * Agregar al archivo movimientos.controller.ts existente
+ */
+
+
+/**
+ * PUT /api/movimientos/:id
+ * Actualizar un movimiento existente
+ */
+export async function actualizarMovimientoController(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const {
+      codigo_acta,
+      ticket_helix,
+      fecha_salida,
+      fecha_llegada,
+      estado_movimiento,
+      motivo,
+      observaciones,
+    } = req.body;
+
+    // Validaciones básicas
+    if (!fecha_salida) {
+      return res.status(400).json({
+        success: false,
+        message: 'La fecha de salida es requerida',
+      });
+    }
+
+    if (!estado_movimiento || !['PENDIENTE', 'EN_TRANSITO', 'COMPLETADO'].includes(estado_movimiento)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Estado de movimiento inválido',
+      });
+    }
+
+    const actualizado = await MovimientoModel.actualizarMovimiento(parseInt(id), {
+      codigo_acta,
+      ticket_helix,
+      fecha_salida,
+      fecha_llegada,
+      estado_movimiento,
+      motivo,
+      observaciones,
+    });
+
+    if (!actualizado) {
+      return res.status(404).json({
+        success: false,
+        message: 'Movimiento no encontrado',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Movimiento actualizado correctamente',
+    });
+  } catch (error) {
+    console.error('Error al actualizar movimiento:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar el movimiento',
+    });
+  }
+}
+
+/**
+ * POST /api/movimientos/:id/cancelar
+ * Cancelar un movimiento y revertir el equipo a su ubicación origen
+ */
+export async function cancelarMovimientoController(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    const cancelado = await MovimientoModel.cancelarMovimiento(parseInt(id));
+
+    if (!cancelado) {
+      return res.status(404).json({
+        success: false,
+        message: 'Movimiento no encontrado',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Movimiento cancelado. El equipo fue devuelto a su ubicación origen.',
+    });
+  } catch (error: any) {
+    console.error('Error al cancelar movimiento:', error);
+    
+    if (error.message === 'El movimiento ya está cancelado') {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error al cancelar el movimiento',
+    });
+  }
+}

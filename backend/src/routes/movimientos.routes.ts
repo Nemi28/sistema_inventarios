@@ -59,4 +59,11 @@ router.patch(
   movimientoController.actualizarEstado
 );
 
+// PUT /api/movimientos/:id - Actualizar movimiento
+router.put('/:id', verificarToken, movimientoController.actualizarMovimientoController);
+
+// POST /api/movimientos/:id/cancelar - Cancelar movimiento
+router.post('/:id/cancelar', verificarToken, movimientoController.cancelarMovimientoController);
+
+
 export default router;

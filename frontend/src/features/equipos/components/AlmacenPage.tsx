@@ -11,6 +11,7 @@ import { EquipoFiltersCascade } from './EquipoFiltersCascade';
 import { MovimientoModal } from '@/features/movimientos/components/MovimientoModal';
 import { HistorialModal } from '@/features/movimientos/components/HistorialModal';
 import { EquipoDetalleModal } from './EquipoDetalleModal';
+import { EditarEquipoRapidoModal } from './EditarEquipoRapidoModal';
 import { useEquiposAlmacen } from '../hooks/useEquiposAlmacen';
 import { useDeleteEquipo } from '../hooks/useDeleteEquipo';
 import { useDisclosure } from '@/hooks/useDisclosure';
@@ -47,6 +48,9 @@ export const AlmacenPage = () => {
 
   // Modal de detalle
   const [equipoParaDetalle, setEquipoParaDetalle] = useState<Equipo | null>(null);
+
+  // Modal de edición rápida
+  const [equipoParaEditarRapido, setEquipoParaEditarRapido] = useState<Equipo | null>(null);
 
   const { isOpen, open, close } = useDisclosure();
   const { 
@@ -109,6 +113,15 @@ export const AlmacenPage = () => {
 
   const handleViewHistory = (equipo: Equipo) => {
     setEquipoParaHistorial(equipo);
+  };
+
+  const handleEditRapido = (equipo: Equipo) => {
+    setEquipoParaEditarRapido(equipo);
+  };
+
+  const handleCloseEditRapido = () => {
+    setEquipoParaEditarRapido(null);
+    refetch();
   };
 
   const confirmDelete = () => {
@@ -287,6 +300,7 @@ export const AlmacenPage = () => {
         meta={{
           onView: handleView,
           onEdit: handleEdit,
+          onEditRapido: handleEditRapido,
           onDelete: handleDelete,
           onViewHistory: handleViewHistory,
         }}
@@ -348,6 +362,14 @@ export const AlmacenPage = () => {
           setEquipoParaDetalle(null);
           setEquipoParaHistorial(equipo);
         }}
+      />
+
+      {/* Modal de Edición Rápida */}
+      <EditarEquipoRapidoModal
+        open={!!equipoParaEditarRapido}
+        onClose={handleCloseEditRapido}
+        equipo={equipoParaEditarRapido}
+        vista="ALMACEN"
       />
 
       {/* Modal de Confirmación */}
