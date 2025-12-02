@@ -1,9 +1,17 @@
-import { useState } from 'react';
-import { TrendingUp, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { TrendingUp, Download, Calendar, X } from 'lucide-react';
 import { SearchBar } from '@/components/common/SearchBar';
 import { DataTable } from '@/components/common/DataTable';
 import { Pagination } from '@/components/common/Pagination';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useMovimientos } from '../hooks/useMovimientos';
 import { columnsMovimientos } from './columns';
 import { MovimientoCard } from './MovimientoCard';
@@ -25,6 +33,11 @@ export const MovimientosPage = () => {
   const [page, setPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   
+  // Filtros de fecha
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+  const [estadoMovimiento, setEstadoMovimiento] = useState('');
+  
   // Debounce para búsqueda
   const debouncedSearch = useDebounce(searchTerm, 400);
   
@@ -41,17 +54,31 @@ export const MovimientosPage = () => {
     page,
     limit: 20,
     busqueda: debouncedSearch || undefined,
+    fecha_desde: fechaDesde || undefined,
+    fecha_hasta: fechaHasta || undefined,
+    estado_movimiento: estadoMovimiento || undefined,
     ordenar_por: 'em.fecha_salida',
     orden: 'DESC',
   });
 
-  // Reset página cuando cambia la búsqueda
+  // Reset página cuando cambian filtros
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, fechaDesde, fechaHasta, estadoMovimiento]);
+
+  // Handler para búsqueda
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    if (value !== searchTerm) {
-      setPage(1);
-    }
   };
+
+  // Handler para limpiar filtros
+  const handleLimpiarFiltros = () => {
+    setFechaDesde('');
+    setFechaHasta('');
+    setEstadoMovimiento('');
+  };
+
+  const hayFiltros = fechaDesde || fechaHasta || estadoMovimiento;
 
   // Handler para ver detalle
   const handleView = (movimiento: Movimiento) => {
@@ -86,6 +113,9 @@ export const MovimientosPage = () => {
       setIsExporting(true);
       await exportarMovimientosExcel({
         busqueda: debouncedSearch || undefined,
+        fecha_desde: fechaDesde || undefined,
+        fecha_hasta: fechaHasta || undefined,
+        estado_movimiento: estadoMovimiento || undefined,
       });
       toast.success('Archivo Excel descargado correctamente');
     } catch (error) {
@@ -95,6 +125,8 @@ export const MovimientosPage = () => {
       setIsExporting(false);
     }
   };
+
+  const hayFiltrosFecha = fechaDesde || fechaHasta;
 
   return (
     <div className="space-y-6 p-6">
@@ -124,14 +156,66 @@ export const MovimientosPage = () => {
         </Button>
       </div>
 
-      {/* Búsqueda */}
-      <div className="flex-1">
-        <SearchBar
-          value={searchTerm}
-          onChange={handleSearchChange}
-          placeholder="Buscar por equipo, serie, acta, ticket, tienda, persona..."
-          isLoading={isLoading && !!debouncedSearch}
-        />
+      {/* Búsqueda y Filtros */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        {/* Búsqueda */}
+        <div className="flex-1">
+          <SearchBar
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder="Buscar por equipo, serie, acta, ticket, tienda, persona..."
+            isLoading={isLoading && !!debouncedSearch}
+          />
+        </div>
+
+        {/* Filtros */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* Estado */}
+          <Select value={estadoMovimiento} onValueChange={setEstadoMovimiento}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PENDIENTE">Pendiente</SelectItem>
+              <SelectItem value="EN_TRANSITO">En Tránsito</SelectItem>
+              <SelectItem value="COMPLETADO">Completado</SelectItem>
+              <SelectItem value="CANCELADO">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Fechas */}
+          <div className="flex items-center gap-1 bg-gray-50 border rounded-md px-2">
+            <Calendar className="h-4 w-4 text-gray-400" />
+            <Input
+              type="date"
+              value={fechaDesde}
+              onChange={(e) => setFechaDesde(e.target.value)}
+              className="w-32 border-0 bg-transparent px-1 focus-visible:ring-0 focus-visible:ring-offset-0"
+              title="Fecha desde"
+            />
+            <span className="text-gray-400">-</span>
+            <Input
+              type="date"
+              value={fechaHasta}
+              onChange={(e) => setFechaHasta(e.target.value)}
+              className="w-32 border-0 bg-transparent px-1 focus-visible:ring-0 focus-visible:ring-offset-0"
+              title="Fecha hasta"
+            />
+          </div>
+
+          {/* Limpiar filtros */}
+          {hayFiltros && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLimpiarFiltros}
+              className="h-9 w-9 text-gray-400 hover:text-gray-600"
+              title="Limpiar filtros"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Tabla */}

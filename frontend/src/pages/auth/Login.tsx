@@ -124,7 +124,7 @@ const Login: React.FC = () => {
         {/* Header */}
         <div className="text-center">
           <h2 className="text-4xl font-extrabold text-white mb-2">
-            Sistema de Inventarios
+           SIGA ENTEL TIENDAS
           </h2>
           <p className="text-gray-400 text-lg">
             Iniciar Sesión
@@ -224,7 +224,7 @@ const Login: React.FC = () => {
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-400">
-          © 2025 Sistema de Inventarios. Todos los derechos reservados.
+          © 2025 Gestion de Activos Tiendas. Todos los derechos reservados.
         </p>
       </div>
     </div>

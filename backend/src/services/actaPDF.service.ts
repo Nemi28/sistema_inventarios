@@ -6,76 +6,19 @@ import { pool } from '../config/database';
 import { RowDataPacket } from 'mysql2';
 
 export class ActaPDFService {
-
-/**
- * Divide el texto en múltiples líneas para que quepa en el ancho especificado
- */
-private static splitTextToFitWidth(
-  text: string,
-  font: PDFFont,
-  fontSize: number,
-  maxWidth: number
-): string[] {
-  // Validar entrada y limpiar caracteres especiales
-  if (!text || text.trim() === '') {
-    return ['-'];
-  }
-
-  // CRÍTICO: Eliminar saltos de línea y otros caracteres no imprimibles
-  const cleanText = text
-    .replace(/[\n\r\t]/g, ' ')  // Reemplazar saltos de línea y tabulaciones con espacios
-    .replace(/\s+/g, ' ')        // Normalizar múltiples espacios a uno solo
-    .trim();
-
-  if (!cleanText) {
-    return ['-'];
-  }
-
-  // Si el texto cabe en una línea, devolverlo directamente
-  const textWidth = font.widthOfTextAtSize(cleanText, fontSize);
-  if (textWidth <= maxWidth) {
-    return [cleanText];
-  }
-
-  // Dividir por palabras
-  const words = cleanText.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-
-  words.forEach((word) => {
-    const testLine = currentLine + (currentLine ? ' ' : '') + word;
-    const lineWidth = font.widthOfTextAtSize(testLine, fontSize);
-
-    if (lineWidth > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
-    }
-  });
-
-  // Agregar última línea
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-
-  // Si no se pudo dividir correctamente, devolver el texto truncado
-  if (lines.length === 0) {
-    let truncated = cleanText;
-    while (font.widthOfTextAtSize(truncated, fontSize) > maxWidth && truncated.length > 0) {
-      truncated = truncated.slice(0, -1);
-    }
-    lines.push(truncated || '-');
-  }
-
-  return lines;
-}
+  private static readonly PAGE_WIDTH = 595.28;
+  private static readonly PAGE_HEIGHT = 841.89;
+  private static readonly MARGIN_TOP = 50;
+  private static readonly MARGIN_BOTTOM = 60; // Espacio mínimo antes del footer
+  private static readonly MARGIN_LEFT = 45;
+  private static readonly MARGIN_RIGHT = 45;
 
   private static readonly FONT_SIZE = {
     TITLE: 14,
     SUBTITLE: 11,
     NORMAL: 11,
     SMALL: 9,
+    TABLE: 7,
   };
 
   private static readonly COLORS = {
@@ -83,39 +26,41 @@ private static splitTextToFitWidth(
     BLUE: rgb(0, 0.3, 0.6),
     GRAY: rgb(0.5, 0.5, 0.5),
     LIGHT_GRAY: rgb(0.9, 0.9, 0.9),
+    HEADER_BLUE: rgb(0.68, 0.85, 0.9),
   };
 
   /**
-   * Genera el PDF del acta de asignación
+   * Genera el PDF del acta de asignación con soporte para múltiples páginas
    */
   static async generarActaPDF(data: GenerarActaRequest): Promise<Buffer> {
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595.28, 841.89]); // A4
-    const { width, height } = page.getSize();
-
+    
     // Cargar fuentes
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
+    // Crear primera página
+    let page = pdfDoc.addPage([this.PAGE_WIDTH, this.PAGE_HEIGHT]);
+    let yPosition = this.PAGE_HEIGHT - this.MARGIN_TOP;
+
     // Obtener nombre del local desde la BD
     const nombreLocal = await this.obtenerNombreLocal(data.local_id);
 
-    let yPosition = height - 50;
-
     // 1. Header (Logo + Código)
-    yPosition = await this.dibujarHeader(pdfDoc, page, yPosition, width);
+    yPosition = await this.dibujarHeader(pdfDoc, page, yPosition);
 
     // 2. Título principal
-    yPosition = this.dibujarTitulo(page, fontBold, yPosition, width);
+    yPosition = this.dibujarTitulo(page, fontBold, yPosition);
 
     // 3. Tipo de atención (checkboxes)
-    yPosition = this.dibujarTipoAtencion(page, font, fontBold, data.tipo_atencion, yPosition, width);
+    yPosition = this.dibujarTipoAtencion(page, font, fontBold, data.tipo_atencion, yPosition);
 
     // 4. Información del usuario (2 columnas)
-    yPosition = this.dibujarInfoUsuario(page, font, fontBold, data, nombreLocal, yPosition, width);
+    yPosition = this.dibujarInfoUsuario(page, font, fontBold, data, nombreLocal, yPosition);
 
-    // 5. Tabla de equipos entregados
-    yPosition = await this.dibujarTablaEquipos(
+    // 5. Tabla de equipos entregados (con paginación)
+    const resultEntregados = await this.dibujarTablaEquiposConPaginacion(
+      pdfDoc,
       page,
       font,
       fontBold,
@@ -123,14 +68,16 @@ private static splitTextToFitWidth(
       data.equipos_entregados,
       data.observaciones_entregados,
       yPosition,
-      width,
       false
     );
+    page = resultEntregados.page;
+    yPosition = resultEntregados.yPosition;
 
-    // 6. Tabla de equipos recojo (condicional)
+    // 6. Tabla de equipos recojo (condicional, con paginación)
     if (data.tipo_atencion === 'REEMPLAZO' || data.tipo_atencion === 'UPGRADE') {
       if (data.equipos_recojo && data.equipos_recojo.length > 0) {
-        yPosition = await this.dibujarTablaEquipos(
+        const resultRecojo = await this.dibujarTablaEquiposConPaginacion(
+          pdfDoc,
           page,
           font,
           fontBold,
@@ -138,20 +85,57 @@ private static splitTextToFitWidth(
           data.equipos_recojo,
           data.observaciones_recojo,
           yPosition,
-          width,
           true
         );
+        page = resultRecojo.page;
+        yPosition = resultRecojo.yPosition;
       }
     }
 
-    // 7. Condiciones y responsabilidades
-    yPosition = await this.dibujarCondiciones(pdfDoc, page, font, fontBold, yPosition);
+    // 7. Condiciones y responsabilidades (con paginación)
+    const resultCondiciones = await this.dibujarCondicionesConPaginacion(
+      pdfDoc,
+      page,
+      font,
+      fontBold,
+      yPosition
+    );
+    page = resultCondiciones.page;
+    yPosition = resultCondiciones.yPosition;
 
-    // 8. Firmas
-    this.dibujarFirmas(page, font, fontBold, yPosition, width);
+    // 8. Firmas (verificar espacio, si no hay, nueva página)
+    const espacioFirmas = 120;
+    if (yPosition < espacioFirmas + this.MARGIN_BOTTOM) {
+      page = pdfDoc.addPage([this.PAGE_WIDTH, this.PAGE_HEIGHT]);
+      yPosition = this.PAGE_HEIGHT - this.MARGIN_TOP;
+    }
+    this.dibujarFirmas(page, font, fontBold, yPosition);
 
     const pdfBytes = await pdfDoc.save();
     return Buffer.from(pdfBytes);
+  }
+
+  /**
+   * Crea una nueva página y retorna la posición Y inicial
+   */
+  private static crearNuevaPagina(pdfDoc: PDFDocument): { page: PDFPage; yPosition: number } {
+    const page = pdfDoc.addPage([this.PAGE_WIDTH, this.PAGE_HEIGHT]);
+    return { page, yPosition: this.PAGE_HEIGHT - this.MARGIN_TOP };
+  }
+
+  /**
+   * Verifica si hay espacio suficiente, si no, crea nueva página
+   */
+  private static verificarEspacio(
+    pdfDoc: PDFDocument,
+    page: PDFPage,
+    yPosition: number,
+    espacioRequerido: number
+  ): { page: PDFPage; yPosition: number } {
+    if (yPosition - espacioRequerido < this.MARGIN_BOTTOM) {
+      return this.crearNuevaPagina(pdfDoc);
+    }
+    return { page, yPosition };
   }
 
   /**
@@ -163,11 +147,7 @@ private static splitTextToFitWidth(
         'SELECT nombre_tienda FROM tienda WHERE id = ?',
         [localId]
       );
-
-      if (tiendas.length > 0) {
-        return tiendas[0].nombre_tienda;
-      }
-      return 'Local no encontrado';
+      return tiendas.length > 0 ? tiendas[0].nombre_tienda : 'Local no encontrado';
     } catch (error) {
       console.error('Error al obtener nombre del local:', error);
       return 'Error al cargar local';
@@ -180,10 +160,8 @@ private static splitTextToFitWidth(
   private static async dibujarHeader(
     pdfDoc: PDFDocument,
     page: PDFPage,
-    yPosition: number,
-    width: number
+    yPosition: number
   ): Promise<number> {
-    // Cargar logo
     const logoPath = path.join(__dirname, '../utils/assets/Entel_logo_pe.png');
     const logoBytes = fs.readFileSync(logoPath);
     const logoImage = await pdfDoc.embedPng(logoBytes);
@@ -191,18 +169,16 @@ private static splitTextToFitWidth(
     const logoWidth = 120;
     const logoHeight = 40;
 
-    // Dibujar logo (izquierda)
     page.drawImage(logoImage, {
-      x: 50,
+      x: this.MARGIN_LEFT,
       y: yPosition - logoHeight,
       width: logoWidth,
       height: logoHeight,
     });
 
-    // Dibujar código "FORM-26B" (derecha)
     const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     page.drawRectangle({
-      x: width - 150,
+      x: this.PAGE_WIDTH - this.MARGIN_RIGHT - 100,
       y: yPosition - logoHeight,
       width: 100,
       height: 30,
@@ -211,7 +187,7 @@ private static splitTextToFitWidth(
     });
 
     page.drawText('FORM-26B', {
-      x: width - 135,
+      x: this.PAGE_WIDTH - this.MARGIN_RIGHT - 85,
       y: yPosition - logoHeight + 10,
       size: this.FONT_SIZE.SUBTITLE,
       font: font,
@@ -227,24 +203,22 @@ private static splitTextToFitWidth(
   private static dibujarTitulo(
     page: PDFPage,
     fontBold: PDFFont,
-    yPosition: number,
-    width: number
+    yPosition: number
   ): number {
     const titulo = 'FORMATO DE ATENCION DE PETICIONES';
     const tituloWidth = fontBold.widthOfTextAtSize(titulo, this.FONT_SIZE.TITLE);
 
     page.drawText(titulo, {
-      x: (width - tituloWidth) / 2,
+      x: (this.PAGE_WIDTH - tituloWidth) / 2,
       y: yPosition,
       size: this.FONT_SIZE.TITLE,
       font: fontBold,
       color: this.COLORS.BLACK,
     });
 
-    // Línea separadora
     page.drawLine({
-      start: { x: 50, y: yPosition - 5 },
-      end: { x: width - 50, y: yPosition - 5 },
+      start: { x: this.MARGIN_LEFT, y: yPosition - 5 },
+      end: { x: this.PAGE_WIDTH - this.MARGIN_RIGHT, y: yPosition - 5 },
       thickness: 1,
       color: this.COLORS.BLACK,
     });
@@ -260,17 +234,14 @@ private static splitTextToFitWidth(
     font: PDFFont,
     fontBold: PDFFont,
     tipoSeleccionado: string,
-    yPosition: number,
-    width: number
+    yPosition: number
   ): number {
     const tipos = ['PRESTAMO', 'REEMPLAZO', 'ASIGNACION', 'UPGRADE'];
-    const startX = 80;
-    let xPosition = startX;
+    let xPosition = 80;
 
     tipos.forEach((tipo) => {
       const isSelected = tipo === tipoSeleccionado;
 
-      // Dibujar checkbox
       page.drawRectangle({
         x: xPosition,
         y: yPosition - 12,
@@ -280,7 +251,6 @@ private static splitTextToFitWidth(
         borderWidth: 1,
       });
 
-      // Si está seleccionado, dibujar X
       if (isSelected) {
         page.drawText('X', {
           x: xPosition + 2,
@@ -291,7 +261,6 @@ private static splitTextToFitWidth(
         });
       }
 
-      // Dibujar label
       page.drawText(tipo + ':', {
         x: xPosition + 18,
         y: yPosition - 9,
@@ -315,56 +284,44 @@ private static splitTextToFitWidth(
     fontBold: PDFFont,
     data: GenerarActaRequest,
     nombreLocal: string,
-    yPosition: number,
-    width: number
+    yPosition: number
   ): number {
-    const leftX = 50;
-    const rightX = width / 2 + 20;
+    const leftX = this.MARGIN_LEFT + 5;
+    const rightX = this.PAGE_WIDTH / 2 + 20;
     const lineHeight = 20;
 
-    // Columna izquierda
     let yPos = yPosition;
 
+    // Columna izquierda
     this.dibujarCampo(page, font, fontBold, 'USUARIO:', data.usuario, leftX, yPos);
-    yPos -= lineHeight;
-
-    this.dibujarCampo(page, font, fontBold, 'EMAIL:', data.email, leftX, yPos);
-    yPos -= lineHeight;
-
-    this.dibujarCampo(page, font, fontBold, 'CARGO:', data.cargo, leftX, yPos);
-    yPos -= lineHeight;
-
-    this.dibujarCampo(page, font, fontBold, 'LOCAL:', nombreLocal, leftX, yPos);
-    yPos -= lineHeight;
-
-    this.dibujarCampo(page, font, fontBold, 'JEFE/RESPONSABLE:', data.jefe_responsable, leftX, yPos);
-
-    // Columna derecha
-    yPos = yPosition;
-
     this.dibujarCampo(page, font, fontBold, 'TICKET:', data.ticket, rightX, yPos);
     yPos -= lineHeight;
 
+    this.dibujarCampo(page, font, fontBold, 'EMAIL:', data.email, leftX, yPos);
     this.dibujarCampo(page, font, fontBold, 'AREA:', data.area, rightX, yPos);
     yPos -= lineHeight;
 
+    this.dibujarCampo(page, font, fontBold, 'CARGO:', data.cargo, leftX, yPos);
     this.dibujarCampo(page, font, fontBold, 'FECHA INICIO:', data.fecha_inicio, rightX, yPos);
     yPos -= lineHeight;
 
+    this.dibujarCampo(page, font, fontBold, 'LOCAL:', nombreLocal, leftX, yPos);
     this.dibujarCampo(page, font, fontBold, 'FECHA FIN:', data.fecha_fin, rightX, yPos);
     yPos -= lineHeight;
 
+    this.dibujarCampo(page, font, fontBold, 'JEFE/RESPONSABLE:', data.jefe_responsable, leftX, yPos);
     this.dibujarCampo(page, font, fontBold, 'ING. DE SOP:', data.ing_soporte, rightX, yPos);
 
-    // Línea separadora
+    yPos -= 25;
+
     page.drawLine({
-      start: { x: 50, y: yPosition - (lineHeight * 5) - 25 },
-      end: { x: width - 50, y: yPosition - (lineHeight * 5) - 25 },
+      start: { x: this.MARGIN_LEFT, y: yPos },
+      end: { x: this.PAGE_WIDTH - this.MARGIN_RIGHT, y: yPos },
       thickness: 1,
       color: this.COLORS.BLACK,
     });
 
-    return yPosition - (lineHeight * 5) - 35;
+    return yPos - 15;
   }
 
   /**
@@ -379,7 +336,6 @@ private static splitTextToFitWidth(
     x: number,
     y: number
   ): void {
-    // Dibujar label
     page.drawText(label, {
       x: x,
       y: y,
@@ -388,8 +344,7 @@ private static splitTextToFitWidth(
       color: this.COLORS.BLACK,
     });
 
-    // Dibujar recuadro para el valor
-    const boxX = x + 110;
+    const boxX = x + 100;
     const boxWidth = 150;
     const boxHeight = 16;
 
@@ -402,8 +357,7 @@ private static splitTextToFitWidth(
       borderWidth: 1,
     });
 
-    // Dibujar valor dentro del recuadro
-    page.drawText(valor, {
+    page.drawText(valor || '-', {
       x: boxX + 3,
       y: y,
       size: this.FONT_SIZE.SMALL,
@@ -412,77 +366,17 @@ private static splitTextToFitWidth(
     });
   }
 
-/**
- * Dibuja la tabla de equipos (entregados o recojo)
- */
-private static async dibujarTablaEquipos(
-  page: PDFPage,
-  font: PDFFont,
-  fontBold: PDFFont,
-  titulo: string,
-  equipos: EquipoEntregado[] | EquipoRecojo[],
-  observaciones: string | undefined,
-  yPosition: number,
-  width: number,
-  incluirEstado: boolean
-): Promise<number> {
-  // Título de la tabla
-  page.drawText(titulo, {
-    x: 50,
-    y: yPosition,
-    size: this.FONT_SIZE.SUBTITLE,
-    font: fontBold,
-    color: this.COLORS.BLACK,
-  });
-
-  yPosition -= 15;
-
-  // Headers de la tabla
-  const headers = ['ITEM', 'EQUIPO', 'MARCA', 'MODELO', 'SERIE', 'INVENTARIO', 'HOSTNAME', 'PROC', 'DISCO', 'RAM'];
-  if (incluirEstado) {
-    headers.push('ESTADO');
-  }
-
-  // Anchos optimizados
-  const colWidths = incluirEstado 
-    ? [20, 38, 35, 60, 65, 45, 65, 38, 48, 32, 60]
-    : [25, 42, 38, 70, 75, 50, 70, 42, 52, 36];
-
-  const startX = 45;
-  const minRowHeight = 12;
-  const lineHeight = 8;
-  const fontSize = this.FONT_SIZE.SMALL - 2;
-  const cellPadding = 2;
-
-  // Dibujar headers
-  let xPos = startX;
-  headers.forEach((header, i) => {
-    page.drawRectangle({
-      x: xPos,
-      y: yPosition - minRowHeight,
-      width: colWidths[i],
-      height: minRowHeight,
-      color: rgb(0.68, 0.85, 0.9),
-      borderColor: this.COLORS.BLACK,
-      borderWidth: 0.5,
-    });
-
-    page.drawText(header, {
-      x: xPos + cellPadding,
-      y: yPosition - 9,
-      size: this.FONT_SIZE.SMALL - 1,
-      font: fontBold,
-      color: this.COLORS.BLACK,
-    });
-    xPos += colWidths[i];
-  });
-
-  yPosition -= minRowHeight;
-
-  // Función para dividir texto - PARTE PALABRAS LARGAS CARÁCTER POR CARÁCTER
-  const dividirTextoEnLineas = (texto: string, maxWidth: number): string[] => {
+  /**
+   * Divide texto en líneas que quepan en el ancho máximo
+   */
+  private static dividirTextoEnLineas(
+    texto: string,
+    font: PDFFont,
+    fontSize: number,
+    maxWidth: number
+  ): string[] {
     if (!texto || texto.trim() === '') return ['-'];
-    
+
     const clean = texto.replace(/[\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
     if (!clean) return ['-'];
 
@@ -491,32 +385,24 @@ private static async dibujarTablaEquipos(
     let lineaActual = '';
 
     palabras.forEach((palabra) => {
-      // Si la palabra sola es más ancha que maxWidth, partirla carácter por carácter
       if (font.widthOfTextAtSize(palabra, fontSize) > maxWidth) {
-        // Guardar línea actual si existe
         if (lineaActual) {
           lineas.push(lineaActual);
           lineaActual = '';
         }
 
-        // Partir la palabra larga carácter por carácter
         let fragmento = '';
         for (let i = 0; i < palabra.length; i++) {
           const prueba = fragmento + palabra[i];
           if (font.widthOfTextAtSize(prueba, fontSize) > maxWidth) {
-            if (fragmento) {
-              lineas.push(fragmento);
-            }
+            if (fragmento) lineas.push(fragmento);
             fragmento = palabra[i];
           } else {
             fragmento = prueba;
           }
         }
-        if (fragmento) {
-          lineaActual = fragmento;
-        }
+        if (fragmento) lineaActual = fragmento;
       } else {
-        // Palabra normal - intentar agregar a línea actual
         const prueba = lineaActual + (lineaActual ? ' ' : '') + palabra;
         if (font.widthOfTextAtSize(prueba, fontSize) > maxWidth && lineaActual) {
           lineas.push(lineaActual);
@@ -527,183 +413,261 @@ private static async dibujarTablaEquipos(
       }
     });
 
-    if (lineaActual) {
-      lineas.push(lineaActual);
-    }
-
+    if (lineaActual) lineas.push(lineaActual);
     return lineas.length > 0 ? lineas : ['-'];
-  };
-
-  // Dibujar filas de equipos
-  equipos.forEach((equipo, index) => {
-    const row = [
-      (index + 1).toString(),
-      equipo.equipo || '-',
-      equipo.marca || '-',
-      equipo.modelo || '-',
-      equipo.serie || '-',
-      equipo.inventario || '-',
-      equipo.hostname || '-',
-      equipo.procesador || '-',
-      equipo.disco || '-',
-      equipo.ram || '-',
-    ];
-
-    if (incluirEstado && 'estado' in equipo) {
-      const equipoRecojo = equipo as EquipoRecojo;
-      row.push(equipoRecojo.estado || '-');
-    }
-
-    // Calcular líneas para cada celda
-    const cellLines: string[][] = [];
-    let maxLineas = 1;
-
-    row.forEach((cell, i) => {
-      const maxWidth = colWidths[i] - (cellPadding * 2);
-      const lineas = dividirTextoEnLineas(cell, maxWidth);
-      cellLines.push(lineas);
-      maxLineas = Math.max(maxLineas, lineas.length);
-    });
-
-    // Altura de la fila basada en cantidad de líneas
-    const rowHeight = Math.max(minRowHeight, maxLineas * lineHeight + 4);
-
-    // Dibujar cada celda
-    xPos = startX;
-    row.forEach((cell, i) => {
-      // Dibujar borde de celda
-      page.drawRectangle({
-        x: xPos,
-        y: yPosition - rowHeight,
-        width: colWidths[i],
-        height: rowHeight,
-        borderColor: this.COLORS.BLACK,
-        borderWidth: 0.5,
-      });
-
-      // Dibujar líneas de texto
-      const lineas = cellLines[i];
-      let yTexto = yPosition - 7;
-
-      lineas.forEach((linea) => {
-        if (yTexto > yPosition - rowHeight + 2) {
-          page.drawText(linea, {
-            x: xPos + cellPadding,
-            y: yTexto,
-            size: fontSize,
-            font: font,
-            color: this.COLORS.BLACK,
-          });
-          yTexto -= lineHeight;
-        }
-      });
-
-      xPos += colWidths[i];
-    });
-
-    yPosition -= rowHeight;
-  });
-
-  // Observaciones
-  if (observaciones) {
-    const observacionesLimpias = observaciones.replace(/[\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
-
-    if (observacionesLimpias) {
-      yPosition -= 8;
-      page.drawText('OBSERVACIONES:', {
-        x: 50,
-        y: yPosition,
-        size: this.FONT_SIZE.SMALL,
-        font: fontBold,
-        color: this.COLORS.BLACK,
-      });
-
-      yPosition -= 12;
-      
-      const obsWidth = width - 100;
-      const obsHeight = 25;
-      
-      page.drawRectangle({
-        x: 50,
-        y: yPosition - obsHeight,
-        width: obsWidth,
-        height: obsHeight,
-        borderColor: this.COLORS.BLACK,
-        borderWidth: 0.5,
-      });
-
-      const words = observacionesLimpias.split(' ');
-      let currentLine = '';
-      let lineY = yPosition - 10;
-      const maxLineWidth = obsWidth - 10;
-
-      words.forEach((word) => {
-        const testLine = currentLine + (currentLine ? ' ' : '') + word;
-        const lineWidth = font.widthOfTextAtSize(testLine, this.FONT_SIZE.SMALL - 2);
-
-        if (lineWidth > maxLineWidth && currentLine) {
-          page.drawText(currentLine, {
-            x: 55,
-            y: lineY,
-            size: this.FONT_SIZE.SMALL - 2,
-            font: font,
-            color: this.COLORS.BLACK,
-          });
-          lineY -= 8;
-          currentLine = word;
-        } else {
-          currentLine = testLine;
-        }
-      });
-
-      if (currentLine) {
-        page.drawText(currentLine, {
-          x: 55,
-          y: lineY,
-          size: this.FONT_SIZE.SMALL - 2,
-          font: font,
-          color: this.COLORS.BLACK,
-        });
-      }
-
-      yPosition -= obsHeight;
-    }
   }
 
-  // Línea separadora
-  page.drawLine({
-    start: { x: 50, y: yPosition - 10 },
-    end: { x: width - 50, y: yPosition - 10 },
-    thickness: 1,
-    color: this.COLORS.BLACK,
-  });
+  /**
+   * Dibuja la tabla de equipos CON soporte para paginación
+   */
+  private static async dibujarTablaEquiposConPaginacion(
+    pdfDoc: PDFDocument,
+    page: PDFPage,
+    font: PDFFont,
+    fontBold: PDFFont,
+    titulo: string,
+    equipos: EquipoEntregado[] | EquipoRecojo[],
+    observaciones: string | undefined,
+    yPosition: number,
+    incluirEstado: boolean
+  ): Promise<{ page: PDFPage; yPosition: number }> {
+    const headers = ['ITEM', 'EQUIPO', 'MARCA', 'MODELO', 'SERIE', 'INVENTARIO', 'HOSTNAME', 'PROC', 'DISCO', 'RAM'];
+    if (incluirEstado) headers.push('ESTADO');
 
-  return yPosition - 25;
-}
+    const colWidths = incluirEstado
+      ? [22, 40, 36, 58, 63, 47, 63, 40, 48, 34, 55]
+      : [25, 45, 40, 65, 70, 52, 68, 45, 52, 38];
+
+    const startX = this.MARGIN_LEFT;
+    const minRowHeight = 14;
+    const lineHeight = 9;
+    const fontSize = this.FONT_SIZE.TABLE;
+    const cellPadding = 2;
+    const headerHeight = 14;
+
+    // Función para dibujar headers
+    const dibujarHeaders = (p: PDFPage, y: number): number => {
+      let xPos = startX;
+      headers.forEach((header, i) => {
+        p.drawRectangle({
+          x: xPos,
+          y: y - headerHeight,
+          width: colWidths[i],
+          height: headerHeight,
+          color: this.COLORS.HEADER_BLUE,
+          borderColor: this.COLORS.BLACK,
+          borderWidth: 0.5,
+        });
+
+        p.drawText(header, {
+          x: xPos + cellPadding,
+          y: y - 10,
+          size: fontSize,
+          font: fontBold,
+          color: this.COLORS.BLACK,
+        });
+        xPos += colWidths[i];
+      });
+      return y - headerHeight;
+    };
+
+    // Verificar espacio para título + headers + al menos una fila
+    const espacioMinimo = 60;
+    const check = this.verificarEspacio(pdfDoc, page, yPosition, espacioMinimo);
+    page = check.page;
+    yPosition = check.yPosition;
+
+    // Título de la tabla
+    page.drawText(titulo, {
+      x: startX,
+      y: yPosition,
+      size: this.FONT_SIZE.SUBTITLE,
+      font: fontBold,
+      color: this.COLORS.BLACK,
+    });
+    yPosition -= 15;
+
+    // Dibujar headers
+    yPosition = dibujarHeaders(page, yPosition);
+
+    // Dibujar filas de equipos
+    for (let index = 0; index < equipos.length; index++) {
+      const equipo = equipos[index];
+      
+      const row = [
+        (index + 1).toString(),
+        equipo.equipo || '-',
+        equipo.marca || '-',
+        equipo.modelo || '-',
+        equipo.serie || '-',
+        equipo.inventario || '-',
+        equipo.hostname || '-',
+        equipo.procesador || '-',
+        equipo.disco || '-',
+        equipo.ram || '-',
+      ];
+
+      if (incluirEstado && 'estado' in equipo) {
+        row.push((equipo as EquipoRecojo).estado || '-');
+      }
+
+      // Calcular líneas para cada celda
+      const cellLines: string[][] = [];
+      let maxLineas = 1;
+
+      row.forEach((cell, i) => {
+        const maxWidth = colWidths[i] - (cellPadding * 2);
+        const lineas = this.dividirTextoEnLineas(cell, font, fontSize, maxWidth);
+        cellLines.push(lineas);
+        maxLineas = Math.max(maxLineas, lineas.length);
+      });
+
+      const rowHeight = Math.max(minRowHeight, maxLineas * lineHeight + 4);
+
+      // Verificar si cabe la fila, si no, nueva página con headers
+      if (yPosition - rowHeight < this.MARGIN_BOTTOM) {
+        const nuevaPagina = this.crearNuevaPagina(pdfDoc);
+        page = nuevaPagina.page;
+        yPosition = nuevaPagina.yPosition;
+
+        // Título de continuación
+        page.drawText(titulo + ' (continuación)', {
+          x: startX,
+          y: yPosition,
+          size: this.FONT_SIZE.SUBTITLE,
+          font: fontBold,
+          color: this.COLORS.BLACK,
+        });
+        yPosition -= 15;
+
+        // Redibujar headers
+        yPosition = dibujarHeaders(page, yPosition);
+      }
+
+      // Dibujar cada celda
+      let xPos = startX;
+      row.forEach((_, i) => {
+        page.drawRectangle({
+          x: xPos,
+          y: yPosition - rowHeight,
+          width: colWidths[i],
+          height: rowHeight,
+          borderColor: this.COLORS.BLACK,
+          borderWidth: 0.5,
+        });
+
+        const lineas = cellLines[i];
+        let yTexto = yPosition - 9;
+
+        lineas.forEach((linea) => {
+          if (yTexto > yPosition - rowHeight + 2) {
+            page.drawText(linea, {
+              x: xPos + cellPadding,
+              y: yTexto,
+              size: fontSize,
+              font: font,
+              color: this.COLORS.BLACK,
+            });
+            yTexto -= lineHeight;
+          }
+        });
+
+        xPos += colWidths[i];
+      });
+
+      yPosition -= rowHeight;
+    }
+
+    // Observaciones
+    if (observaciones) {
+      const observacionesLimpias = observaciones.replace(/[\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+
+      if (observacionesLimpias) {
+        const espacioObs = 50;
+        const checkObs = this.verificarEspacio(pdfDoc, page, yPosition, espacioObs);
+        page = checkObs.page;
+        yPosition = checkObs.yPosition;
+
+        yPosition -= 8;
+        page.drawText('OBSERVACIONES:', {
+          x: startX,
+          y: yPosition,
+          size: this.FONT_SIZE.SMALL,
+          font: fontBold,
+          color: this.COLORS.BLACK,
+        });
+
+        yPosition -= 12;
+
+        const obsWidth = this.PAGE_WIDTH - this.MARGIN_LEFT - this.MARGIN_RIGHT;
+        const obsHeight = 25;
+
+        page.drawRectangle({
+          x: startX,
+          y: yPosition - obsHeight,
+          width: obsWidth,
+          height: obsHeight,
+          borderColor: this.COLORS.BLACK,
+          borderWidth: 0.5,
+        });
+
+        const lineasObs = this.dividirTextoEnLineas(
+          observacionesLimpias,
+          font,
+          this.FONT_SIZE.SMALL - 1,
+          obsWidth - 10
+        );
+
+        let lineY = yPosition - 10;
+        lineasObs.forEach((linea) => {
+          if (lineY > yPosition - obsHeight + 2) {
+            page.drawText(linea, {
+              x: startX + 5,
+              y: lineY,
+              size: this.FONT_SIZE.SMALL - 1,
+              font: font,
+              color: this.COLORS.BLACK,
+            });
+            lineY -= 9;
+          }
+        });
+
+        yPosition -= obsHeight;
+      }
+    }
+
+    // Línea separadora
+    yPosition -= 10;
+    page.drawLine({
+      start: { x: this.MARGIN_LEFT, y: yPosition },
+      end: { x: this.PAGE_WIDTH - this.MARGIN_RIGHT, y: yPosition },
+      thickness: 1,
+      color: this.COLORS.BLACK,
+    });
+
+    return { page, yPosition: yPosition - 15 };
+  }
 
   /**
-   * Dibuja las condiciones y responsabilidades
+   * Dibuja las condiciones CON soporte para paginación
    */
-  private static async dibujarCondiciones(
+  private static async dibujarCondicionesConPaginacion(
     pdfDoc: PDFDocument,
     page: PDFPage,
     font: PDFFont,
     fontBold: PDFFont,
     yPosition: number
-  ): Promise<number> {
-    // Si el espacio no es suficiente, crear nueva página
-    if (yPosition < 250) {
-      page = pdfDoc.addPage([595.28, 841.89]);
-      yPosition = page.getSize().height - 50;
-    }
+  ): Promise<{ page: PDFPage; yPosition: number }> {
+    // Verificar espacio para título
+    const checkTitulo = this.verificarEspacio(pdfDoc, page, yPosition, 30);
+    page = checkTitulo.page;
+    yPosition = checkTitulo.yPosition;
 
-    // Título centrado
     const titulo = 'Condiciones y responsabilidades sobre la asignación de equipos';
     const tituloWidth = fontBold.widthOfTextAtSize(titulo, this.FONT_SIZE.NORMAL);
-    const pageWidth = page.getSize().width;
 
     page.drawText(titulo, {
-      x: (pageWidth - tituloWidth) / 2,
+      x: (this.PAGE_WIDTH - tituloWidth) / 2,
       y: yPosition,
       size: this.FONT_SIZE.NORMAL,
       font: fontBold,
@@ -712,7 +676,6 @@ private static async dibujarTablaEquipos(
 
     yPosition -= 18;
 
-    // Condiciones
     const condiciones = [
       { text: '1. El empleado recibe el equipo asignado, por tiempo indefinido para uso exclusivo en actividades relacionadas a su trabajo para Entel.', indent: 0 },
       { text: '2. Es responsabilidad del empleado mantener las condiciones de seguridad adecuadas para no exponer el equipo a robo o daños, dentro y fuera de las instalaciones de Entel.', indent: 0 },
@@ -729,50 +692,42 @@ private static async dibujarTablaEquipos(
 
     const lineSpacing = 10;
     const fontSize = this.FONT_SIZE.SMALL - 1;
+    const maxWidth = this.PAGE_WIDTH - this.MARGIN_LEFT - this.MARGIN_RIGHT - 10;
 
-    condiciones.forEach((condicion) => {
-      const words = condicion.text.split(' ');
-      let currentLine = '';
-      const startX = 50 + condicion.indent;
-      const maxWidth = 495 - condicion.indent;
+    for (const condicion of condiciones) {
+      const startX = this.MARGIN_LEFT + 5 + condicion.indent;
+      const condMaxWidth = maxWidth - condicion.indent;
+      const lineas = this.dividirTextoEnLineas(condicion.text, font, fontSize, condMaxWidth);
+      
+      // Calcular espacio necesario para esta condición
+      const espacioNecesario = lineas.length * lineSpacing + 5;
 
-      words.forEach((word, index) => {
-        const testLine = currentLine + (currentLine ? ' ' : '') + word;
-        const lineWidth = font.widthOfTextAtSize(testLine, fontSize);
+      // Verificar espacio
+      if (yPosition - espacioNecesario < this.MARGIN_BOTTOM) {
+        const nuevaPagina = this.crearNuevaPagina(pdfDoc);
+        page = nuevaPagina.page;
+        yPosition = nuevaPagina.yPosition;
+      }
 
-        if (lineWidth > maxWidth && currentLine) {
-          page.drawText(currentLine, {
-            x: startX,
-            y: yPosition,
-            size: fontSize,
-            font: font,
-            color: this.COLORS.BLACK,
-          });
-          yPosition -= lineSpacing;
-          currentLine = word;
-        } else {
-          currentLine = testLine;
-        }
-
-        if (index === words.length - 1 && currentLine) {
-          page.drawText(currentLine, {
-            x: startX,
-            y: yPosition,
-            size: fontSize,
-            font: font,
-            color: this.COLORS.BLACK,
-          });
-          yPosition -= lineSpacing;
-        }
+      // Dibujar cada línea
+      lineas.forEach((linea) => {
+        page.drawText(linea, {
+          x: startX,
+          y: yPosition,
+          size: fontSize,
+          font: font,
+          color: this.COLORS.BLACK,
+        });
+        yPosition -= lineSpacing;
       });
 
+      // Espacio extra después de items numerados
       if (condicion.text.match(/^\d+\./)) {
         yPosition -= 3;
       }
-    });
+    }
 
-    yPosition -= 15;
-    return yPosition;
+    return { page, yPosition: yPosition - 15 };
   }
 
   /**
@@ -782,23 +737,20 @@ private static async dibujarTablaEquipos(
     page: PDFPage,
     font: PDFFont,
     fontBold: PDFFont,
-    yPosition: number,
-    width: number
+    yPosition: number
   ): void {
-    // Línea separadora
     page.drawLine({
-      start: { x: 50, y: yPosition },
-      end: { x: width - 50, y: yPosition },
+      start: { x: this.MARGIN_LEFT, y: yPosition },
+      end: { x: this.PAGE_WIDTH - this.MARGIN_RIGHT, y: yPosition },
       thickness: 1,
       color: this.COLORS.BLACK,
     });
 
     yPosition -= 25;
 
-    // Dos columnas para firmas
-    const col1X = 50;
-    const col2X = width / 2 + 25;
-    const boxWidth = (width - 150) / 2;
+    const col1X = this.MARGIN_LEFT;
+    const col2X = this.PAGE_WIDTH / 2 + 25;
+    const boxWidth = (this.PAGE_WIDTH - this.MARGIN_LEFT - this.MARGIN_RIGHT - 50) / 2;
     const boxHeight = 60;
 
     // Firma Usuario Entel
@@ -811,13 +763,12 @@ private static async dibujarTablaEquipos(
       borderWidth: 1,
     });
 
-    // Header de la firma
     page.drawRectangle({
       x: col1X,
       y: yPosition - 20,
       width: boxWidth,
       height: 20,
-      color: rgb(0.9, 0.9, 0.9),
+      color: this.COLORS.LIGHT_GRAY,
       borderColor: this.COLORS.BLACK,
       borderWidth: 1,
     });
@@ -840,13 +791,12 @@ private static async dibujarTablaEquipos(
       borderWidth: 1,
     });
 
-    // Header Usuario / DNI
     page.drawRectangle({
       x: col2X,
       y: yPosition - 20,
       width: boxWidth,
       height: 20,
-      color: rgb(0.9, 0.9, 0.9),
+      color: this.COLORS.LIGHT_GRAY,
       borderColor: this.COLORS.BLACK,
       borderWidth: 1,
     });
