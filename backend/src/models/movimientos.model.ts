@@ -581,3 +581,119 @@ export const obtenerMovimientosParaExportar = async (filtros: FiltrosMovimiento 
 
   return movimientos;
 };
+
+/**
+ * Funciones para actualizar y cancelar movimientos
+ * Agregar al archivo movimientos.model.ts existente
+ */
+
+
+
+export interface ActualizarMovimientoData {
+  codigo_acta?: string;
+  ticket_helix?: string;
+  fecha_salida: string;
+  fecha_llegada?: string;
+  estado_movimiento: 'PENDIENTE' | 'EN_TRANSITO' | 'COMPLETADO';
+  motivo?: string;
+  observaciones?: string;
+}
+
+/**
+ * Actualizar un movimiento existente
+ */
+export async function actualizarMovimiento(
+  id: number,
+  datos: ActualizarMovimientoData
+): Promise<boolean> {
+  const query = `
+    UPDATE equipos_movimientos 
+    SET 
+      codigo_acta = ?,
+      ticket_helix = ?,
+      fecha_salida = ?,
+      fecha_llegada = ?,
+      estado_movimiento = ?,
+      motivo = ?,
+      observaciones = ?
+    WHERE id = ? AND activo = true
+  `;
+
+  const [result] = await pool.query<ResultSetHeader>(query, [
+    datos.codigo_acta || null,
+    datos.ticket_helix || null,
+    datos.fecha_salida,
+    datos.fecha_llegada || null,
+    datos.estado_movimiento,
+    datos.motivo || null,
+    datos.observaciones || null,
+    id,
+  ]);
+
+  return result.affectedRows > 0;
+}
+
+/**
+ * Cancelar un movimiento y revertir el equipo a su ubicación origen
+ */
+export async function cancelarMovimiento(id: number): Promise<boolean> {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // 1. Obtener datos del movimiento
+    const [movimientos] = await connection.query<RowDataPacket[]>(
+      `SELECT * FROM equipos_movimientos WHERE id = ? AND activo = true`,
+      [id]
+    );
+
+    if (movimientos.length === 0) {
+      throw new Error('Movimiento no encontrado');
+    }
+
+    const movimiento = movimientos[0];
+
+    // Verificar que no esté ya cancelado
+    if (movimiento.estado_movimiento === 'CANCELADO') {
+      throw new Error('El movimiento ya está cancelado');
+    }
+
+    // 2. Actualizar estado del movimiento a CANCELADO
+    const fechaCancelacion = new Date().toISOString().split('T')[0];
+    const observacionCancelacion = movimiento.observaciones
+      ? `${movimiento.observaciones}\n[CANCELADO el ${fechaCancelacion}]`
+      : `[CANCELADO el ${fechaCancelacion}]`;
+
+    await connection.query(
+      `UPDATE equipos_movimientos 
+       SET estado_movimiento = 'CANCELADO', 
+           observaciones = ?
+       WHERE id = ?`,
+      [observacionCancelacion, id]
+    );
+
+    // 3. Revertir el equipo a su ubicación origen
+    let updateEquipoQuery = `
+      UPDATE equipos 
+      SET ubicacion_actual = ?,
+          tienda_id = ?
+      WHERE id = ?
+    `;
+
+    await connection.query(updateEquipoQuery, [
+      movimiento.ubicacion_origen,
+      movimiento.tienda_origen_id || null,
+      movimiento.equipo_id,
+    ]);
+
+    await connection.commit();
+    return true;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+

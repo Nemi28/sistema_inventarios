@@ -1,7 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, History, Eye } from 'lucide-react';
+import { Pencil, Trash2, History, Eye, SlidersHorizontal } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Equipo } from '../types';
 
@@ -144,12 +144,13 @@ export const columnsAlmacen: ColumnDef<Equipo>[] = [
   {
     id: 'acciones',
     header: 'Acciones',
-    size: 130,
+    size: 150,
     cell: ({ row, table }) => {
       const item = row.original;
       const meta = table.options.meta as {
         onView?: (equipo: Equipo) => void;
         onEdit?: (equipo: Equipo) => void;
+        onEditRapido?: (equipo: Equipo) => void;
         onDelete?: (equipo: Equipo) => void;
         onViewHistory?: (equipo: Equipo) => void;
       };
@@ -176,12 +177,27 @@ export const columnsAlmacen: ColumnDef<Equipo>[] = [
             variant="ghost"
             onClick={(e) => {
               e.stopPropagation();
+              if (meta?.onEditRapido) {
+                meta.onEditRapido(item);
+              }
+            }}
+            className="h-7 w-7 p-0 hover:bg-amber-50 hover:text-amber-600"
+            title="Edición Rápida"
+            type="button"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
               if (meta?.onEdit) {
                 meta.onEdit(item);
               }
             }}
             className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
-            title="Editar"
+            title="Editar Completo"
             type="button"
           >
             <Pencil className="h-3.5 w-3.5" />

@@ -10,6 +10,7 @@ import { MovimientoModal } from '@/features/movimientos/components/MovimientoMod
 import { RetornarAlmacenModal } from '@/features/movimientos/components/RetornarAlmacenModal';
 import { HistorialModal } from '@/features/movimientos/components/HistorialModal';
 import { EquipoDetalleModal } from './EquipoDetalleModal';
+import { EditarEquipoRapidoModal } from './EditarEquipoRapidoModal';
 import { useEquiposPersonas } from '../hooks/useEquiposPersonas';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -53,6 +54,9 @@ export const PersonasInventarioPage = () => {
 
   // Modal de detalle
   const [equipoParaDetalle, setEquipoParaDetalle] = useState<Equipo | null>(null);
+
+  // Modal de edición rápida
+  const [equipoParaEditarRapido, setEquipoParaEditarRapido] = useState<Equipo | null>(null);
 
   const { hasPermission } = usePermissions();
   const canExport = hasPermission(['gestor', 'administrador']);
@@ -106,6 +110,16 @@ export const PersonasInventarioPage = () => {
   // Handler para retornar a almacén
   const handleRetornarAlmacen = (equipo: Equipo) => {
     setEquipoParaRetornar(equipo);
+  };
+
+  // Handler para edición rápida
+  const handleEditRapido = (equipo: Equipo) => {
+    setEquipoParaEditarRapido(equipo);
+  };
+
+  const handleCloseEditRapido = () => {
+    setEquipoParaEditarRapido(null);
+    refetch();
   };
 
   // Exportar a Excel
@@ -252,6 +266,7 @@ export const PersonasInventarioPage = () => {
         getRowId={(row) => row.id.toString()}
         meta={{
           onView: handleView,
+          onEditRapido: handleEditRapido,
           onRetornarAlmacen: handleRetornarAlmacen,
           onViewHistory: handleViewHistory,
         }}
@@ -314,6 +329,14 @@ export const PersonasInventarioPage = () => {
           setEquipoParaDetalle(null);
           setEquipoParaHistorial(equipo);
         }}
+      />
+
+      {/* Modal de Edición Rápida */}
+      <EditarEquipoRapidoModal
+        open={!!equipoParaEditarRapido}
+        onClose={handleCloseEditRapido}
+        equipo={equipoParaEditarRapido}
+        vista="PERSONA"
       />
     </div>
   );

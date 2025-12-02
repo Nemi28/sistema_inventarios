@@ -8,6 +8,7 @@ import { useMovimientos } from '../hooks/useMovimientos';
 import { columnsMovimientos } from './columns';
 import { MovimientoCard } from './MovimientoCard';
 import { ActualizarEstadoModal } from './ActualizarEstadoModal';
+import { EditarMovimientoModal } from './EditarMovimientoModal';
 import { Movimiento } from '../types';
 import { useDebounce } from '@/hooks/useDebounce';
 import { exportarMovimientosExcel } from '../services/movimientos.service';
@@ -33,7 +34,10 @@ export const MovimientosPage = () => {
   // Modal de confirmar recepción
   const [movimientoParaConfirmar, setMovimientoParaConfirmar] = useState<Movimiento | null>(null);
 
-  const { data, isLoading } = useMovimientos({
+  // Modal de edición
+  const [movimientoParaEditar, setMovimientoParaEditar] = useState<Movimiento | null>(null);
+
+  const { data, isLoading, refetch } = useMovimientos({
     page,
     limit: 20,
     busqueda: debouncedSearch || undefined,
@@ -54,9 +58,26 @@ export const MovimientosPage = () => {
     setMovimientoSeleccionado(movimiento);
   };
 
+  // Handler para editar
+  const handleEdit = (movimiento: Movimiento) => {
+    setMovimientoParaEditar(movimiento);
+  };
+
+  // Handler para cerrar edición
+  const handleCloseEdit = () => {
+    setMovimientoParaEditar(null);
+    refetch();
+  };
+
   // Handler para confirmar recepción
   const handleConfirmarRecepcion = (movimiento: Movimiento) => {
     setMovimientoParaConfirmar(movimiento);
+  };
+
+  // Handler para cerrar confirmación
+  const handleCloseConfirmar = () => {
+    setMovimientoParaConfirmar(null);
+    refetch();
   };
 
   // Handler para exportar Excel
@@ -120,6 +141,7 @@ export const MovimientosPage = () => {
         isLoading={isLoading}
         meta={{
           onView: handleView,
+          onEdit: handleEdit,
           onConfirmarRecepcion: handleConfirmarRecepcion,
         }}
       />
@@ -151,8 +173,15 @@ export const MovimientosPage = () => {
       {/* Modal de Confirmar Recepción */}
       <ActualizarEstadoModal
         open={!!movimientoParaConfirmar}
-        onClose={() => setMovimientoParaConfirmar(null)}
+        onClose={handleCloseConfirmar}
         movimiento={movimientoParaConfirmar}
+      />
+
+      {/* Modal de Edición */}
+      <EditarMovimientoModal
+        open={!!movimientoParaEditar}
+        onClose={handleCloseEdit}
+        movimiento={movimientoParaEditar}
       />
     </div>
   );

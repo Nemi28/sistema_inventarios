@@ -85,3 +85,13 @@ export interface MovimientoFilters {
   ordenar_por?: string;
   orden?: 'ASC' | 'DESC';
 }
+
+export interface ActualizarMovimientoData {
+  codigo_acta?: string;
+  ticket_helix?: string;
+  fecha_salida: string;
+  fecha_llegada?: string;
+  estado_movimiento: 'PENDIENTE' | 'EN_TRANSITO' | 'COMPLETADO';
+  motivo?: string;
+  observaciones?: string;
+}

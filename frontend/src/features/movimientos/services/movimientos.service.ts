@@ -1,5 +1,5 @@
 import api from '@/services/api';
-import { Movimiento, CrearMovimientoRequest, ActualizarEstadoRequest, MovimientoFilters } from '../types';
+import { Movimiento, CrearMovimientoRequest, ActualizarEstadoRequest, MovimientoFilters, ActualizarMovimientoData } from '../types';
 import { PaginatedResponse } from '@/types/api.types';
 
 /**
@@ -100,3 +100,20 @@ export const exportarMovimientosExcel = async (filtros: MovimientoFilters = {}):
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
 };
+
+/**
+ * Actualizar un movimiento existente
+ */
+export async function actualizarMovimiento(
+  id: number,
+  datos: ActualizarMovimientoData
+): Promise<void> {
+  await api.put(`/api/movimientos/${id}`, datos);
+}
+
+/**
+ * Cancelar un movimiento y revertir el equipo a su ubicación origen
+ */
+export async function cancelarMovimiento(id: number): Promise<void> {
+  await api.post(`/api/movimientos/${id}/cancelar`);
+}

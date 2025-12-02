@@ -28,8 +28,6 @@ export interface Equipo {
   hostname?: string;
   posicion_tienda?: string;
   area_tienda?: string;
-  responsable_socio?: string;
-  responsable_entel?: string;
   es_accesorio?: boolean;
   equipo_principal_id?: number;
   observaciones?: string;
@@ -77,9 +75,8 @@ export const crearEquipo = async (equipo: Equipo): Promise<number> => {
         tipo_propiedad, fecha_compra, garantia, sistema_operativo,
         estado_actual, ubicacion_actual, tienda_id,
         hostname, posicion_tienda, area_tienda,
-        responsable_socio, responsable_entel,
         es_accesorio, equipo_principal_id, observaciones, activo
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [resultado] = await pool.execute<ResultSetHeader>(query, [
@@ -97,8 +94,6 @@ export const crearEquipo = async (equipo: Equipo): Promise<number> => {
       equipo.hostname || null,
       equipo.posicion_tienda || null,
       equipo.area_tienda || null,
-      equipo.responsable_socio || null,
-      equipo.responsable_entel || null,
       equipo.es_accesorio ?? false,
       equipo.equipo_principal_id || null,
       equipo.observaciones || null,
@@ -423,16 +418,6 @@ export const actualizarEquipo = async (id: number, datos: Partial<Equipo>): Prom
     if (datos.area_tienda !== undefined) {
       campos.push('area_tienda = ?');
       valores.push(datos.area_tienda);
-    }
-
-    if (datos.responsable_socio !== undefined) {
-      campos.push('responsable_socio = ?');
-      valores.push(datos.responsable_socio);
-    }
-
-    if (datos.responsable_entel !== undefined) {
-      campos.push('responsable_entel = ?');
-      valores.push(datos.responsable_entel);
     }
 
     if (datos.es_accesorio !== undefined) {

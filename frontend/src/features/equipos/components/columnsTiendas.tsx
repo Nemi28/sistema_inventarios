@@ -1,7 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, ArrowLeft, History } from 'lucide-react';
+import { Eye, ArrowLeft, History, SlidersHorizontal } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Equipo } from '../types';
 
@@ -166,11 +166,12 @@ export const columnsTiendas: ColumnDef<Equipo>[] = [
   {
     id: 'acciones',
     header: 'Acciones',
-    size: 100,
+    size: 120,
     cell: ({ row, table }) => {
       const item = row.original;
       const meta = table.options.meta as {
         onView?: (equipo: Equipo) => void;
+        onEditRapido?: (equipo: Equipo) => void;
         onRetornarAlmacen?: (equipo: Equipo) => void;
         onViewHistory?: (equipo: Equipo) => void;
       };
@@ -191,6 +192,21 @@ export const columnsTiendas: ColumnDef<Equipo>[] = [
             type="button"
           >
             <Eye className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (meta?.onEditRapido) {
+                meta.onEditRapido(item);
+              }
+            }}
+            className="h-7 w-7 p-0 hover:bg-amber-50 hover:text-amber-600"
+            title="Edición Rápida"
+            type="button"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
           </Button>
           <Button
             size="sm"
