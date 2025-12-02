@@ -9,7 +9,7 @@ const Footer: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           {/* Copyright */}
           <div className="text-sm">
-            <p>&copy; {currentYear} Sistema de Inventarios. Todos los derechos reservados.</p>
+            <p>&copy; {currentYear} Gestión de Activos Tiendas. Todos los derechos reservados.</p>
           </div>
 
           {/* Version */}
