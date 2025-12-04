@@ -97,6 +97,8 @@ export async function exportarEquiposExcel(req: Request, res: Response): Promise
         { header: 'ORDEN COMPRA', key: 'orden_compra', width: 15 },
         { header: 'FECHA COMPRA', key: 'fecha_compra', width: 14 },
         { header: 'OBSERVACIONES', key: 'observaciones', width: 30 },
+        { header: 'DISCO SSD', key: 'disco_ssd', width: 20 },
+        { header: 'MEMORIA RAM', key: 'memoria_ram', width: 25 },
       ];
     } else if (filtros.ubicacion === 'TIENDA') {
       // Columnas para Tiendas (con datos de tienda)
@@ -119,6 +121,8 @@ export async function exportarEquiposExcel(req: Request, res: Response): Promise
         { header: 'RESPONSABLE ENTEL', key: 'responsable_entel', width: 22 },
         { header: 'PROPIEDAD', key: 'propiedad', width: 12 },
         { header: 'SISTEMA OPERATIVO', key: 'sistema_operativo', width: 18 },
+        { header: 'DISCO SSD', key: 'disco_ssd', width: 20 },
+        { header: 'MEMORIA RAM', key: 'memoria_ram', width: 25 },
       ];
     } else if (filtros.ubicacion === 'PERSONA') {
       // Columnas para Personas
@@ -136,6 +140,8 @@ export async function exportarEquiposExcel(req: Request, res: Response): Promise
         { header: 'PROPIEDAD', key: 'propiedad', width: 12 },
         { header: 'ESTADO', key: 'estado', width: 14 },
         { header: 'OBSERVACIONES', key: 'observaciones', width: 30 },
+        { header: 'DISCO SSD', key: 'disco_ssd', width: 20 },
+        { header: 'MEMORIA RAM', key: 'memoria_ram', width: 25 },
       ];
     } else {
       // Columnas generales (todos los equipos)
@@ -153,6 +159,8 @@ export async function exportarEquiposExcel(req: Request, res: Response): Promise
         { header: 'ESTADO', key: 'estado', width: 14 },
         { header: 'PROPIEDAD', key: 'propiedad', width: 12 },
         { header: 'OBSERVACIONES', key: 'observaciones', width: 30 },
+        { header: 'DISCO SSD', key: 'disco_ssd', width: 20 },
+        { header: 'MEMORIA RAM', key: 'memoria_ram', width: 25 },
       ];
     }
 
@@ -219,6 +227,8 @@ export async function exportarEquiposExcel(req: Request, res: Response): Promise
           ? new Date(equipo.fecha_asignacion).toLocaleDateString('es-PE') 
           : '-',
         tipo_movimiento: TIPO_MOVIMIENTO_LABELS[equipo.tipo_movimiento_persona] || equipo.tipo_movimiento_persona || '-',
+        disco_ssd: equipo.disco_ssd || '-',
+        memoria_ram: equipo.memoria_ram || '-',
       };
 
       const row = worksheet.addRow(rowData);

@@ -1,5 +1,5 @@
 import api from '@/services/api';
-import { Movimiento, CrearMovimientoRequest, ActualizarEstadoRequest, MovimientoFilters, ActualizarMovimientoData } from '../types';
+import { Movimiento, CrearMovimientoRequest, ActualizarEstadoRequest, MovimientoFilters, EquipoParaInstalacion,ActualizarMovimientoData } from '../types';
 import { PaginatedResponse } from '@/types/api.types';
 
 /**
@@ -117,3 +117,49 @@ export async function actualizarMovimiento(
 export async function cancelarMovimiento(id: number): Promise<void> {
   await api.post(`/api/movimientos/${id}/cancelar`);
 }
+
+/**
+ * Obtener equipos de una tienda disponibles para instalar accesorios
+ */
+export const obtenerEquiposParaInstalacion = async (tiendaId: number): Promise<EquipoParaInstalacion[]> => {
+  const { data } = await api.get<{ success: boolean; data: EquipoParaInstalacion[] }>(
+    `/api/movimientos/equipos-tienda/${tiendaId}/para-instalacion`
+  );
+  return data.data;
+};
+
+/**
+ * Obtener accesorios instalados en un equipo
+ */
+export const obtenerAccesoriosInstalados = async (equipoId: number): Promise<EquipoParaInstalacion[]> => {
+  const { data } = await api.get<{ success: boolean; data: EquipoParaInstalacion[] }>(
+    `/api/movimientos/equipo/${equipoId}/accesorios`
+  );
+  return data.data;
+};
+
+/**
+ * Instalar un accesorio en un equipo
+ */
+export const instalarAccesorio = async (
+  accesorioId: number, 
+  equipoDestinoId: number, 
+  observaciones?: string
+): Promise<void> => {
+  await api.post(`/api/movimientos/accesorio/${accesorioId}/instalar`, {
+    equipo_destino_id: equipoDestinoId,
+    observaciones,
+  });
+};
+
+/**
+ * Desinstalar un accesorio de su equipo principal
+ */
+export const desinstalarAccesorio = async (
+  accesorioId: number, 
+  observaciones?: string
+): Promise<void> => {
+  await api.post(`/api/movimientos/accesorio/${accesorioId}/desinstalar`, {
+    observaciones,
+  });
+};

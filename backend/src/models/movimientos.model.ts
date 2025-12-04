@@ -68,13 +68,19 @@ export interface FiltrosMovimiento extends PaginacionParams {
   orden?: string;
 }
 
+export interface InstalacionAccesorio {
+  accesorio_id: number;
+  equipo_destino_id: number;
+}
+
 /**
  * Crear movimientos (uno o varios equipos con transacción atómica)
- * INCLUYE VALIDACIÓN DE UBICACIÓN
+ * INCLUYE VALIDACIÓN DE UBICACIÓN Y SOPORTE PARA INSTALACIÓN DE ACCESORIOS
  */
 export const crearMovimientos = async (
   equipos_ids: number[],
-  datosMovimiento: Omit<Movimiento, 'equipo_id' | 'id'>
+  datosMovimiento: Omit<Movimiento, 'equipo_id' | 'id'>,
+  instalaciones_accesorios?: InstalacionAccesorio[]
 ): Promise<{ movimientos_ids: number[]; cantidad: number }> => {
   const connection = await pool.getConnection();
 
@@ -83,10 +89,11 @@ export const crearMovimientos = async (
 
     // ✅ VALIDACIÓN: Verificar que todos los equipos estén en la ubicación origen esperada
     const equiposConUbicacionIncorrecta: { id: number; serie: string; ubicacion_actual: string }[] = [];
+    const equiposInfo: Map<number, { es_accesorio: boolean; numero_serie: string }> = new Map();
     
     for (const equipo_id of equipos_ids) {
       const [equipoRows] = await connection.execute<RowDataPacket[]>(
-        `SELECT id, numero_serie, ubicacion_actual, tienda_id FROM equipos WHERE id = ? AND activo = true`,
+        `SELECT id, numero_serie, ubicacion_actual, tienda_id, es_accesorio FROM equipos WHERE id = ? AND activo = true`,
         [equipo_id]
       );
 
@@ -95,6 +102,10 @@ export const crearMovimientos = async (
       }
 
       const equipo = equipoRows[0];
+      equiposInfo.set(equipo_id, { 
+        es_accesorio: equipo.es_accesorio || false, 
+        numero_serie: equipo.numero_serie 
+      });
 
       // Validar ubicación
       if (equipo.ubicacion_actual !== datosMovimiento.ubicacion_origen) {
@@ -130,10 +141,77 @@ export const crearMovimientos = async (
       );
     }
 
+    // ✅ VALIDACIÓN DE INSTALACIONES DE ACCESORIOS
+    if (instalaciones_accesorios && instalaciones_accesorios.length > 0) {
+      for (const instalacion of instalaciones_accesorios) {
+        // Validar que el accesorio está en la lista de equipos a mover
+        if (!equipos_ids.includes(instalacion.accesorio_id)) {
+          throw new Error(`El accesorio ID ${instalacion.accesorio_id} no está en la lista de equipos a mover`);
+        }
+
+        // Validar que es realmente un accesorio
+        const infoAccesorio = equiposInfo.get(instalacion.accesorio_id);
+        if (!infoAccesorio?.es_accesorio) {
+          throw new Error(`El equipo ID ${instalacion.accesorio_id} no es un accesorio`);
+        }
+
+        // Validar equipo destino
+        const equipoDestinoEnEnvio = equipos_ids.includes(instalacion.equipo_destino_id);
+        
+        if (!equipoDestinoEnEnvio) {
+          // Si no va en el envío, debe estar ya en la tienda destino
+          const [equipoDestinoRows] = await connection.execute<RowDataPacket[]>(
+            `SELECT id, es_accesorio, tienda_id FROM equipos WHERE id = ? AND activo = true`,
+            [instalacion.equipo_destino_id]
+          );
+
+          if (equipoDestinoRows.length === 0) {
+            throw new Error(`Equipo destino ID ${instalacion.equipo_destino_id} no encontrado`);
+          }
+
+          const equipoDestino = equipoDestinoRows[0];
+
+          if (equipoDestino.es_accesorio) {
+            throw new Error('No se puede instalar un accesorio en otro accesorio');
+          }
+
+          if (equipoDestino.tienda_id !== datosMovimiento.tienda_destino_id) {
+            throw new Error(`El equipo destino ID ${instalacion.equipo_destino_id} no está en la tienda destino`);
+          }
+        } else {
+          // Si va en el envío, validar que no sea accesorio
+          const infoDestino = equiposInfo.get(instalacion.equipo_destino_id);
+          if (infoDestino?.es_accesorio) {
+            throw new Error('No se puede instalar un accesorio en otro accesorio');
+          }
+        }
+      }
+    }
+
     const movimientosIds: number[] = [];
 
+    // Crear mapa de instalaciones para búsqueda rápida
+    const instalacionesMap = new Map<number, number>();
+    if (instalaciones_accesorios) {
+      for (const inst of instalaciones_accesorios) {
+        instalacionesMap.set(inst.accesorio_id, inst.equipo_destino_id);
+      }
+    }
+
     for (const equipo_id of equipos_ids) {
-      // 1. Insertar movimiento
+      const infoEquipo = equiposInfo.get(equipo_id);
+      const equipoDestinoId = instalacionesMap.get(equipo_id);
+
+      // Observaciones adicionales si es accesorio con instalación
+      let observacionesFinal = datosMovimiento.observaciones || null;
+      if (infoEquipo?.es_accesorio && equipoDestinoId) {
+        const notaInstalacion = `[Se instalará en equipo ID: ${equipoDestinoId}]`;
+        observacionesFinal = observacionesFinal 
+          ? `${observacionesFinal} ${notaInstalacion}` 
+          : notaInstalacion;
+      }
+
+      // 1. Insertar movimiento de salida/asignación
       const queryMovimiento = `
         INSERT INTO equipos_movimientos (
           equipo_id, tipo_movimiento, ubicacion_origen, tienda_origen_id, persona_origen,
@@ -159,7 +237,7 @@ export const crearMovimientos = async (
         datosMovimiento.ticket_helix || null,
         datosMovimiento.usuario_id,
         datosMovimiento.motivo || null,
-        datosMovimiento.observaciones || null,
+        observacionesFinal,
         datosMovimiento.activo ?? true,
       ]);
 
@@ -179,6 +257,35 @@ export const crearMovimientos = async (
         datosMovimiento.tienda_destino_id || null,
         equipo_id,
       ]);
+
+      // 3. Si es accesorio con instalación, crear movimiento de instalación y actualizar equipo_principal_id
+      if (infoEquipo?.es_accesorio && equipoDestinoId) {
+        // Crear movimiento de instalación
+        const queryInstalacion = `
+          INSERT INTO equipos_movimientos (
+            equipo_id, tipo_movimiento, ubicacion_origen, tienda_origen_id,
+            ubicacion_destino, tienda_destino_id, estado_movimiento,
+            fecha_salida, usuario_id, observaciones, activo
+          ) VALUES (?, 'INSTALACION_ACCESORIO', 'TIENDA', ?, 'TIENDA', ?, 'COMPLETADO', ?, ?, ?, true)
+        `;
+
+        const [resultInstalacion] = await connection.execute<ResultSetHeader>(queryInstalacion, [
+          equipo_id,
+          datosMovimiento.tienda_destino_id,
+          datosMovimiento.tienda_destino_id,
+          datosMovimiento.fecha_salida,
+          datosMovimiento.usuario_id,
+          `Instalado en equipo ID: ${equipoDestinoId}`,
+        ]);
+
+        movimientosIds.push(resultInstalacion.insertId);
+
+        // Actualizar equipo_principal_id del accesorio
+        await connection.execute(
+          `UPDATE equipos SET equipo_principal_id = ? WHERE id = ?`,
+          [equipoDestinoId, equipo_id]
+        );
+      }
     }
 
     await connection.commit();
@@ -697,3 +804,203 @@ export async function cancelarMovimiento(id: number): Promise<boolean> {
   }
 }
 
+
+/**
+ * Obtener equipos de una tienda disponibles para instalar accesorios
+ * (Solo LAPTOP y DESKTOP, no accesorios)
+ */
+export async function obtenerEquiposParaInstalacion(tiendaId: number) {
+  const query = `
+    SELECT 
+      e.id,
+      e.numero_serie,
+      e.inv_entel,
+      e.hostname,
+      m.nombre as modelo_nombre,
+      ma.nombre as marca_nombre,
+      c.nombre as categoria_nombre,
+      sc.nombre as subcategoria_nombre
+    FROM equipos e
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    WHERE e.tienda_id = ?
+      AND e.ubicacion_actual = 'TIENDA'
+      AND e.activo = true
+      AND (e.es_accesorio = false OR e.es_accesorio IS NULL)
+      AND c.nombre IN ('LAPTOP', 'DESKTOP', 'PC', 'COMPUTADORA')
+    ORDER BY m.nombre, e.inv_entel
+  `;
+
+  const [rows] = await pool.execute<RowDataPacket[]>(query, [tiendaId]);
+  return rows;
+}
+
+/**
+ * Obtener accesorios instalados en un equipo
+ */
+export async function obtenerAccesoriosInstalados(equipoId: number) {
+  const query = `
+    SELECT 
+      e.id,
+      e.numero_serie,
+      e.inv_entel,
+      m.nombre as modelo_nombre,
+      ma.nombre as marca_nombre,
+      c.nombre as categoria_nombre,
+      sc.nombre as subcategoria_nombre
+    FROM equipos e
+    INNER JOIN modelos m ON e.modelo_id = m.id
+    INNER JOIN marcas ma ON m.marca_id = ma.id
+    INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+    INNER JOIN categorias c ON sc.categoria_id = c.id
+    WHERE e.equipo_principal_id = ?
+      AND e.activo = true
+    ORDER BY c.nombre, m.nombre
+  `;
+
+  const [rows] = await pool.execute<RowDataPacket[]>(query, [equipoId]);
+  return rows;
+}
+
+/**
+ * Instalar un accesorio en un equipo (cuando ya están en la misma tienda)
+ */
+export async function instalarAccesorio(
+  accesorioId: number,
+  equipoDestinoId: number,
+  usuarioId: number,
+  observaciones?: string
+): Promise<void> {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Validar accesorio
+    const [accesorioRows] = await connection.execute<RowDataPacket[]>(
+      `SELECT id, es_accesorio, equipo_principal_id, ubicacion_actual, tienda_id 
+       FROM equipos WHERE id = ? AND activo = true`,
+      [accesorioId]
+    );
+
+    if (accesorioRows.length === 0) {
+      throw new Error('Accesorio no encontrado');
+    }
+
+    const accesorio = accesorioRows[0];
+
+    if (!accesorio.es_accesorio) {
+      throw new Error('El equipo seleccionado no es un accesorio');
+    }
+
+    if (accesorio.equipo_principal_id) {
+      throw new Error('El accesorio ya está instalado en otro equipo');
+    }
+
+    // Validar equipo destino
+    const [equipoRows] = await connection.execute<RowDataPacket[]>(
+      `SELECT id, es_accesorio, ubicacion_actual, tienda_id FROM equipos WHERE id = ? AND activo = true`,
+      [equipoDestinoId]
+    );
+
+    if (equipoRows.length === 0) {
+      throw new Error('Equipo destino no encontrado');
+    }
+
+    const equipoDestino = equipoRows[0];
+
+    if (equipoDestino.es_accesorio) {
+      throw new Error('No se puede instalar un accesorio en otro accesorio');
+    }
+
+    // Validar que estén en la misma tienda
+    if (accesorio.tienda_id !== equipoDestino.tienda_id) {
+      throw new Error('El accesorio y el equipo destino deben estar en la misma tienda');
+    }
+
+    // Crear movimiento de instalación
+    await connection.execute(
+      `INSERT INTO equipos_movimientos (
+        equipo_id, tipo_movimiento, ubicacion_origen, tienda_origen_id,
+        ubicacion_destino, tienda_destino_id, estado_movimiento,
+        fecha_salida, usuario_id, observaciones, activo
+      ) VALUES (?, 'INSTALACION_ACCESORIO', 'TIENDA', ?, 'TIENDA', ?, 'COMPLETADO', NOW(), ?, ?, true)`,
+      [accesorioId, accesorio.tienda_id, accesorio.tienda_id, usuarioId, 
+       observaciones || `Instalado en equipo ID: ${equipoDestinoId}`]
+    );
+
+    // Actualizar equipo_principal_id
+    await connection.execute(
+      `UPDATE equipos SET equipo_principal_id = ? WHERE id = ?`,
+      [equipoDestinoId, accesorioId]
+    );
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+/**
+ * Desinstalar un accesorio de su equipo principal
+ */
+export async function desinstalarAccesorio(
+  accesorioId: number,
+  usuarioId: number,
+  observaciones?: string
+): Promise<void> {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Validar accesorio
+    const [accesorioRows] = await connection.execute<RowDataPacket[]>(
+      `SELECT id, es_accesorio, equipo_principal_id, tienda_id FROM equipos WHERE id = ? AND activo = true`,
+      [accesorioId]
+    );
+
+    if (accesorioRows.length === 0) {
+      throw new Error('Accesorio no encontrado');
+    }
+
+    const accesorio = accesorioRows[0];
+
+    if (!accesorio.es_accesorio) {
+      throw new Error('El equipo seleccionado no es un accesorio');
+    }
+
+    if (!accesorio.equipo_principal_id) {
+      throw new Error('El accesorio no está instalado en ningún equipo');
+    }
+
+    // Crear movimiento de desinstalación
+    await connection.execute(
+      `INSERT INTO equipos_movimientos (
+        equipo_id, tipo_movimiento, ubicacion_origen, tienda_origen_id,
+        ubicacion_destino, tienda_destino_id, estado_movimiento,
+        fecha_salida, usuario_id, observaciones, activo
+      ) VALUES (?, 'DESINSTALACION_ACCESORIO', 'TIENDA', ?, 'TIENDA', ?, 'COMPLETADO', NOW(), ?, ?, true)`,
+      [accesorioId, accesorio.tienda_id, accesorio.tienda_id, usuarioId,
+       observaciones || `Desinstalado de equipo ID: ${accesorio.equipo_principal_id}`]
+    );
+
+    // Quitar equipo_principal_id
+    await connection.execute(
+      `UPDATE equipos SET equipo_principal_id = NULL WHERE id = ?`,
+      [accesorioId]
+    );
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}

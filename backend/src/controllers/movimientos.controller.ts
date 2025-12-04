@@ -24,7 +24,7 @@ export const crear = async (req: Request, res: Response) => {
       });
     }
 
-    const { equipos_ids, ...datosMovimiento } = req.body;
+    const { equipos_ids, instalaciones_accesorios, ...datosMovimiento } = req.body;
 
     if (!equipos_ids || !Array.isArray(equipos_ids) || equipos_ids.length === 0) {
       return res.status(400).json({
@@ -44,7 +44,7 @@ export const crear = async (req: Request, res: Response) => {
 
     datosMovimiento.usuario_id = usuario.id;
 
-    const resultado = await MovimientoModel.crearMovimientos(equipos_ids, datosMovimiento);
+    const resultado = await MovimientoModel.crearMovimientos(equipos_ids, datosMovimiento, instalaciones_accesorios);
 
     const mensaje =
       resultado.cantidad === 1
@@ -582,3 +582,74 @@ export async function cancelarMovimientoController(req: Request, res: Response) 
     });
   }
 }
+
+
+// ============================================
+// CONTROLADORES PARA ACCESORIOS
+// ============================================
+
+/**
+ * GET /api/movimientos/equipos-tienda/:tiendaId/para-instalacion
+ */
+export const getEquiposParaInstalacion = async (req: Request, res: Response) => {
+  try {
+    const { tiendaId } = req.params;
+    const equipos = await MovimientoModel.obtenerEquiposParaInstalacion(parseInt(tiendaId));
+    res.json({ success: true, data: equipos });
+  } catch (error) {
+    console.error('Error al obtener equipos para instalación:', error);
+    res.status(500).json({ success: false, mensaje: 'Error al obtener equipos' });
+  }
+};
+
+/**
+ * GET /api/movimientos/equipo/:equipoId/accesorios
+ */
+export const getAccesoriosInstalados = async (req: Request, res: Response) => {
+  try {
+    const { equipoId } = req.params;
+    const accesorios = await MovimientoModel.obtenerAccesoriosInstalados(parseInt(equipoId));
+    res.json({ success: true, data: accesorios });
+  } catch (error) {
+    console.error('Error al obtener accesorios:', error);
+    res.status(500).json({ success: false, mensaje: 'Error al obtener accesorios' });
+  }
+};
+
+/**
+ * POST /api/movimientos/accesorio/:accesorioId/instalar
+ */
+export const postInstalarAccesorio = async (req: Request, res: Response) => {
+  try {
+    const { accesorioId } = req.params;
+    const { equipo_destino_id, observaciones } = req.body;
+    const usuarioId = (req as any).user?.id;
+
+    if (!equipo_destino_id) {
+      return res.status(400).json({ success: false, mensaje: 'Se requiere el ID del equipo destino' });
+    }
+
+    await MovimientoModel.instalarAccesorio(parseInt(accesorioId), parseInt(equipo_destino_id), usuarioId, observaciones);
+    res.json({ success: true, mensaje: 'Accesorio instalado correctamente' });
+  } catch (error: any) {
+    console.error('Error al instalar accesorio:', error);
+    res.status(400).json({ success: false, mensaje: error.message || 'Error al instalar accesorio' });
+  }
+};
+
+/**
+ * POST /api/movimientos/accesorio/:accesorioId/desinstalar
+ */
+export const postDesinstalarAccesorio = async (req: Request, res: Response) => {
+  try {
+    const { accesorioId } = req.params;
+    const { observaciones } = req.body;
+    const usuarioId = (req as any).user?.id;
+
+    await MovimientoModel.desinstalarAccesorio(parseInt(accesorioId), usuarioId, observaciones);
+    res.json({ success: true, mensaje: 'Accesorio desinstalado correctamente' });
+  } catch (error: any) {
+    console.error('Error al desinstalar accesorio:', error);
+    res.status(400).json({ success: false, mensaje: error.message || 'Error al desinstalar accesorio' });
+  }
+};
