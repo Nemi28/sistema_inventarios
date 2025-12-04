@@ -6,11 +6,28 @@ export type TipoMovimiento =
   | 'RETORNO_TIENDA'
   | 'RETORNO_PERSONA'
   | 'TRANSFERENCIA_TIENDAS'
-  | 'CAMBIO_ESTADO';
+  | 'CAMBIO_ESTADO'
+  | 'INSTALACION_ACCESORIO'
+  | 'DESINSTALACION_ACCESORIO';
 
 export type UbicacionMovimiento = 'ALMACEN' | 'TIENDA' | 'PERSONA';
 
 export type EstadoMovimiento = 'PENDIENTE' | 'EN_TRANSITO' | 'COMPLETADO' | 'CANCELADO';
+
+export interface InstalacionAccesorio {
+  accesorio_id: number;
+  equipo_destino_id: number;
+}
+
+export interface EquipoParaInstalacion {
+  id: number;
+  numero_serie: string;
+  inv_entel: string;
+  hostname: string;
+  modelo_nombre: string;
+  marca_nombre: string;
+  categoria_nombre: string;
+}
 
 export interface Movimiento {
   id: number;
@@ -60,6 +77,7 @@ export interface CrearMovimientoRequest {
   ticket_helix?: string;
   motivo?: string;
   observaciones?: string;
+  instalaciones_accesorios?: InstalacionAccesorio[];
 }
 
 export interface ActualizarEstadoRequest {

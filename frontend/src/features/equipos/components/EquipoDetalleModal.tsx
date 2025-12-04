@@ -15,6 +15,7 @@ import {
   Cpu,
   History,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -26,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Equipo } from '../types';
+import { useAccesoriosInstalados } from '../hooks/useAccesoriosInstalados';
 
 interface EquipoDetalleModalProps {
   open: boolean;
@@ -89,6 +91,11 @@ export const EquipoDetalleModal = ({
   equipo,
   onViewHistory 
 }: EquipoDetalleModalProps) => {
+  const { data: accesorios, isLoading: loadingAccesorios } = useAccesoriosInstalados(
+    equipo?.id || 0,
+    { enabled: open && !!equipo && !equipo.es_accesorio }
+  );
+
   if (!equipo) return null;
 
   const estadoConfig = getEstadoConfig(equipo.estado_actual);
@@ -290,6 +297,37 @@ export const EquipoDetalleModal = ({
                 label="Última Ubicación" 
                 value={equipo.ultima_ubicacion_origen} 
               />
+            </div>
+          )}
+
+          {/* Sección: Accesorios Instalados */}
+          {!equipo.es_accesorio && (
+            <div className="bg-amber-50 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-amber-700 mb-2 flex items-center gap-2">
+                <Cpu className="h-4 w-4" />
+                Accesorios Instalados
+              </h4>
+              {loadingAccesorios ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Cargando...
+                </div>
+              ) : accesorios && accesorios.length > 0 ? (
+                <div className="space-y-2">
+                  {accesorios.map((acc: any) => (
+                    <div key={acc.id} className="flex items-center gap-2 text-sm bg-white rounded p-2 border border-amber-200">
+                      <Cpu className="h-4 w-4 text-amber-500" />
+                      <span className="font-medium">{acc.subcategoria_nombre || acc.categoria_nombre}</span>
+                      <span className="text-gray-400">|</span>
+                      <span>{acc.modelo_nombre}</span>
+                      <span className="text-gray-400">|</span>
+                      <span className="font-mono text-xs text-gray-600">Serie: {acc.numero_serie || 'S/N'}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 italic">Sin accesorios instalados</p>
+              )}
             </div>
           )}
 

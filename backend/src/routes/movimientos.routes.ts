@@ -26,6 +26,28 @@ router.get(
 // GET /api/movimientos/equipo/:equipoId - Obtener historial de un equipo
 router.get('/equipo/:equipoId', verificarToken, movimientoController.obtenerHistorialEquipo);
 
+// GET /api/movimientos/equipo/:equipoId/accesorios - Accesorios instalados en un equipo
+router.get('/equipo/:equipoId/accesorios', verificarToken, movimientoController.getAccesoriosInstalados);
+
+// GET /api/movimientos/equipos-tienda/:tiendaId/para-instalacion - Equipos disponibles para instalar accesorios
+router.get('/equipos-tienda/:tiendaId/para-instalacion', verificarToken, movimientoController.getEquiposParaInstalacion);
+
+// POST /api/movimientos/accesorio/:accesorioId/instalar
+router.post(
+  '/accesorio/:accesorioId/instalar',
+  verificarToken,
+  verificarRol('gestor', 'administrador'),
+  movimientoController.postInstalarAccesorio
+);
+
+// POST /api/movimientos/accesorio/:accesorioId/desinstalar
+router.post(
+  '/accesorio/:accesorioId/desinstalar',
+  verificarToken,
+  verificarRol('gestor', 'administrador'),
+  movimientoController.postDesinstalarAccesorio
+);
+
 // GET /api/movimientos/:id - Obtener movimiento por ID
 router.get('/:id', verificarToken, movimientoController.obtenerPorId);
 

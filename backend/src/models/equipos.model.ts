@@ -595,7 +595,7 @@ export const listarEquiposTiendas = async (filtros: FiltrosEquipo = {}) => {
     ['e.numero_serie', 'e.inv_entel', 't.nombre_tienda', 'e.fecha_creacion', 'm.nombre', 'ma.nombre']
   );
 
-  const condiciones: string[] = ['e.ubicacion_actual = ?', 'e.activo = true'];
+  const condiciones: string[] = ['e.ubicacion_actual = ?', 'e.activo = true', 'e.equipo_principal_id IS NULL'];
   const valores: any[] = ['TIENDA'];
 
   // Búsqueda global

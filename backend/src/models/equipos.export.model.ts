@@ -108,7 +108,27 @@ export async function obtenerEquiposParaExportar(filtros: FiltrosExportarEquipos
           AND em.estado_movimiento = 'COMPLETADO'
         ORDER BY em.fecha_creacion DESC
         LIMIT 1
-      ) AS tipo_movimiento_persona
+      ) AS tipo_movimiento_persona,
+      -- Disco SSD instalado (serie)
+      (
+        SELECT GROUP_CONCAT(acc.numero_serie SEPARATOR ' / ')
+        FROM equipos acc
+        INNER JOIN modelos m_acc ON acc.modelo_id = m_acc.id
+        INNER JOIN subcategorias sc_acc ON m_acc.subcategoria_id = sc_acc.id
+        WHERE acc.equipo_principal_id = e.id 
+          AND acc.activo = true
+          AND sc_acc.nombre LIKE '%SSD%'
+      ) AS disco_ssd,
+      -- Memoria RAM instalada (modelo)
+      (
+        SELECT GROUP_CONCAT(m_acc.nombre SEPARATOR ' / ')
+        FROM equipos acc
+        INNER JOIN modelos m_acc ON acc.modelo_id = m_acc.id
+        INNER JOIN subcategorias sc_acc ON m_acc.subcategoria_id = sc_acc.id
+        WHERE acc.equipo_principal_id = e.id 
+          AND acc.activo = true
+          AND sc_acc.nombre LIKE '%RAM%'
+      ) AS memoria_ram
     FROM equipos e
     INNER JOIN modelos m ON e.modelo_id = m.id
     INNER JOIN marcas ma ON m.marca_id = ma.id
@@ -118,6 +138,7 @@ export async function obtenerEquiposParaExportar(filtros: FiltrosExportarEquipos
     LEFT JOIN socio s ON t.socio_id = s.id
     LEFT JOIN ordenes_compra oc ON e.orden_compra_id = oc.id
     WHERE e.activo = true
+      AND e.equipo_principal_id IS NULL
   `;
 
   const params: any[] = [];
