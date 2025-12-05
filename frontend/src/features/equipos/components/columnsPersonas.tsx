@@ -27,82 +27,59 @@ export const columnsPersonas: ColumnDef<Equipo>[] = [
     ),
     size: 40,
   },
-  {
-    id: 'categoria',
-    accessorKey: 'categoria_nombre',
-    header: 'Categoría',
-    size: 90,
-    cell: ({ row }) => (
-      <span className="text-xs font-medium truncate block max-w-[90px]" title={row.original.categoria_nombre}>
-        {row.original.categoria_nombre || '-'}
-      </span>
-    ),
+{
+  id: 'equipo',
+  header: 'Equipo',
+  size: 180,
+  cell: ({ row }) => {
+    const { subcategoria_nombre, marca_nombre, modelo_nombre, categoria_nombre, accesorios_count } = row.original;
+    return (
+      <div className="text-xs">
+        <div className="flex items-center gap-1">
+          <span className="font-semibold truncate max-w-[150px]" title={modelo_nombre}>
+            {modelo_nombre || '-'}
+          </span>
+          {(accesorios_count ?? 0) > 0 && (
+            <span className="bg-amber-100 text-amber-700 text-[9px] px-1.5 py-0.5 rounded-full font-medium">
+              {accesorios_count} acc
+            </span>
+          )}
+        </div>
+        <div className="text-[10px] text-gray-500 truncate max-w-[180px]">
+          {subcategoria_nombre || categoria_nombre} • {marca_nombre}
+        </div>
+      </div>
+    );
   },
+},
   {
-    id: 'subcategoria',
-    accessorKey: 'subcategoria_nombre',
-    header: 'Subcategoría',
-    size: 110,
-    cell: ({ row }) => (
-      <span className="text-xs truncate block max-w-[110px]" title={row.original.subcategoria_nombre}>
-        {row.original.subcategoria_nombre || '-'}
-      </span>
-    ),
-  },
-  {
-    id: 'marca',
-    accessorKey: 'marca_nombre',
-    header: 'Marca',
-    size: 80,
-    cell: ({ row }) => (
-      <span className="text-xs font-medium truncate block max-w-[80px]" title={row.original.marca_nombre}>
-        {row.original.marca_nombre || '-'}
-      </span>
-    ),
-  },
-  {
-    id: 'modelo',
-    accessorKey: 'modelo_nombre',
-    header: 'Modelo',
-    size: 110,
-    cell: ({ row }) => (
-      <span className="text-xs font-semibold truncate block max-w-[110px]" title={row.original.modelo_nombre}>
-        {row.original.modelo_nombre || '-'}
-      </span>
-    ),
-  },
-  {
-    id: 'numero_serie',
-    accessorKey: 'numero_serie',
-    header: 'Serie',
-    size: 100,
-    cell: ({ row }) => (
-      <span className="font-mono text-xs truncate block max-w-[100px]" title={row.original.numero_serie}>
-        {row.original.numero_serie || '-'}
-      </span>
-    ),
-  },
-  {
-    id: 'inv_entel',
-    accessorKey: 'inv_entel',
-    header: 'Inv. Entel',
-    size: 100,
-    cell: ({ row }) => (
-      <span className="font-mono text-xs font-semibold text-primary truncate block max-w-[100px]" title={row.original.inv_entel}>
-        {row.original.inv_entel || '-'}
-      </span>
-    ),
+    id: 'identificacion',
+    header: 'Identificación',
+    size: 120,
+    cell: ({ row }) => {
+      const { numero_serie, inv_entel } = row.original;
+      return (
+        <div className="text-xs font-mono">
+          <div className="truncate max-w-[120px]" title={numero_serie}>
+            {numero_serie || 'S/N'}
+          </div>
+          {inv_entel && inv_entel !== 'NULL' && (
+            <div className="text-[10px] text-primary font-semibold">{inv_entel}</div>
+          )}
+        </div>
+      );
+    },
   },
   {
     id: 'asignado_a',
     accessorKey: 'persona_asignada',
     header: 'Asignado a',
-    size: 140,
+    size: 150,
     cell: ({ row }) => {
       const { persona_asignada, fecha_asignacion } = row.original;
       return (
         <div className="text-xs">
-          <div className="font-semibold truncate max-w-[140px]" title={persona_asignada}>
+          <div className="font-semibold truncate max-w-[150px]" title={persona_asignada}>
             {persona_asignada || '-'}
           </div>
           {fecha_asignacion && (
@@ -120,10 +97,12 @@ export const columnsPersonas: ColumnDef<Equipo>[] = [
     header: 'Procedencia',
     size: 130,
     cell: ({ row }) => {
-      const procedencia = row.original.ultima_ubicacion_origen;
+      let procedencia = row.original.ultima_ubicacion_origen || '-';
+      // Quitar prefijos "Tienda: " y "Persona: "
+      procedencia = procedencia.replace(/^(Tienda|Persona):\s*/i, '');
       return (
         <span className="text-xs text-gray-600 truncate block max-w-[130px]" title={procedencia}>
-          {procedencia || '-'}
+          {procedencia}
         </span>
       );
     },
@@ -132,9 +111,9 @@ export const columnsPersonas: ColumnDef<Equipo>[] = [
     id: 'acta',
     accessorKey: 'codigo_acta',
     header: 'Acta',
-    size: 110,
+    size: 100,
     cell: ({ row }) => (
-      <span className="font-mono text-xs truncate block max-w-[110px]" title={row.original.codigo_acta}>
+      <span className="font-mono text-xs truncate block max-w-[100px]" title={row.original.codigo_acta}>
         {row.original.codigo_acta || '-'}
       </span>
     ),
@@ -143,7 +122,7 @@ export const columnsPersonas: ColumnDef<Equipo>[] = [
     id: 'estado_actual',
     accessorKey: 'estado_actual',
     header: 'Estado',
-    size: 100,
+    size: 90,
     cell: ({ row }) => {
       const estado = row.original.estado_actual;
       const estadoMap: Record<string, { color: string; text: string }> = {
@@ -164,7 +143,7 @@ export const columnsPersonas: ColumnDef<Equipo>[] = [
   {
     id: 'acciones',
     header: 'Acciones',
-    size: 120,
+    size: 110,
     cell: ({ row, table }) => {
       const item = row.original;
       const meta = table.options.meta as {

@@ -470,6 +470,7 @@ export const eliminarEquipo = async (id: number): Promise<boolean> => {
   return resultado.affectedRows > 0;
 };
 
+
 /**
  * Listar equipos en ALMACÉN con última ubicación y búsqueda
  */
@@ -538,7 +539,7 @@ export const listarEquiposAlmacen = async (filtros: FiltrosEquipo = {}) => {
     WHERE ${whereClause}
   `;
 
-  // Query principal con última ubicación
+  // Query principal con última ubicación y equipo principal
   const query = `
     SELECT 
       e.*,
@@ -555,7 +556,12 @@ export const listarEquiposAlmacen = async (filtros: FiltrosEquipo = {}) => {
         WHEN mov_anterior.ubicacion_origen = 'PERSONA' 
           THEN CONCAT('Persona: ', mov_anterior.persona_origen)
         ELSE NULL
-      END as ultima_ubicacion_origen
+      END as ultima_ubicacion_origen,
+      ep.id as equipo_principal_id,
+      ep.numero_serie as equipo_principal_serie,
+      ep.inv_entel as equipo_principal_inv_entel,
+      mp.nombre as equipo_principal_modelo,
+      (SELECT COUNT(*) FROM equipos acc WHERE acc.equipo_principal_id = e.id AND acc.activo = true) AS accesorios_count
     FROM equipos e
     INNER JOIN modelos m ON e.modelo_id = m.id
     INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
@@ -568,6 +574,8 @@ export const listarEquiposAlmacen = async (filtros: FiltrosEquipo = {}) => {
         AND ubicacion_destino = 'ALMACEN'
       )
     LEFT JOIN tienda t ON mov_anterior.tienda_origen_id = t.id
+    LEFT JOIN equipos ep ON e.equipo_principal_id = ep.id
+    LEFT JOIN modelos mp ON ep.modelo_id = mp.id
     WHERE ${whereClause}
     ORDER BY ${campo} ${direccion}
     LIMIT ${limit} OFFSET ${offset}
@@ -675,7 +683,8 @@ export const listarEquiposTiendas = async (filtros: FiltrosEquipo = {}) => {
       m.nombre as modelo_nombre,
       t.nombre_tienda,
       t.pdv,
-      s.razon_social as socio_nombre
+      s.razon_social as socio_nombre,
+      (SELECT COUNT(*) FROM equipos acc WHERE acc.equipo_principal_id = e.id AND acc.activo = true) AS accesorios_count
     FROM equipos e
     INNER JOIN modelos m ON e.modelo_id = m.id
     INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
@@ -710,7 +719,7 @@ export const listarEquiposPersonas = async (filtros: FiltrosEquipo = {}) => {
     ['e.numero_serie', 'e.inv_entel', 'mov_actual.fecha_salida', 'e.fecha_creacion', 'm.nombre', 'ma.nombre']
   );
 
-  const condiciones: string[] = ['e.ubicacion_actual = ?', 'e.activo = true'];
+  const condiciones: string[] = ['e.ubicacion_actual = ?', 'e.activo = true', 'e.equipo_principal_id IS NULL'];
   const valores: any[] = ['PERSONA'];
 
   // Búsqueda global - se aplicará después del JOIN con movimientos
@@ -796,6 +805,7 @@ export const listarEquiposPersonas = async (filtros: FiltrosEquipo = {}) => {
       mov_actual.persona_destino as persona_asignada,
       mov_actual.fecha_salida as fecha_asignacion,
       mov_actual.codigo_acta,
+      (SELECT COUNT(*) FROM equipos acc WHERE acc.equipo_principal_id = e.id AND acc.activo = true) AS accesorios_count,
       CASE 
         WHEN mov_anterior.ubicacion_origen = 'TIENDA' 
           THEN CONCAT('Tienda: ', t.nombre_tienda)

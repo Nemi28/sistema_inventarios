@@ -28,7 +28,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Cpu, Unlink, AlertTriangle } from 'lucide-react';
 import { equipoSchema, EquipoFormValues } from '../../../lib/equipos-validations';
 import { useCreateEquipo } from '../hooks/useCreateEquipo';
 import { useUpdateEquipo } from '../hooks/useUpdateEquipo';
@@ -38,6 +38,7 @@ import { obtenerOrdenesCompra } from '@/features/ordenes_compra/services/ordenes
 import { obtenerModeloPorId } from '@/features/modelos/services/modelos.service';
 import { ModeloSelector } from '@/components/common/ModeloSelector';
 import { TiendaCombobox } from '@/components/common/TiendaCombobox';
+import { useDesinstalarAccesorio } from '@/features/movimientos/hooks/useDesinstalarAccesorio';
 
 interface EquipoFormModalProps {
   open: boolean;
@@ -50,14 +51,17 @@ export const EquipoFormModal = ({
   onOpenChange,
   equipo,
 }: EquipoFormModalProps) => {
+  
   const isEditing = !!equipo;
   const createMutation = useCreateEquipo();
   const updateMutation = useUpdateEquipo();
-  
+  const desinstalarMutation = useDesinstalarAccesorio();
+
   const [tiendas, setTiendas] = useState<any[]>([]);
   const [ordenesCompra, setOrdenesCompra] = useState<any[]>([]);
   const [loadingTiendas, setLoadingTiendas] = useState(false);
   const [loadingOrdenes, setLoadingOrdenes] = useState(false);
+  const [showDesinstalarConfirm, setShowDesinstalarConfirm] = useState(false);
 
   // Estado para el selector de modelo
   const [modeloSelectorValue, setModeloSelectorValue] = useState({
@@ -120,7 +124,7 @@ export const EquipoFormModal = ({
         modelo_id: equipo.modelo_id || 0,
         orden_compra_id: equipo.orden_compra_id || undefined,
         tipo_propiedad: equipo.tipo_propiedad || 'PROPIO',
-        fecha_compra: equipo.fecha_compra || '',
+        fecha_compra: equipo.fecha_compra ? equipo.fecha_compra.split('T')[0] : '',
         garantia: equipo.garantia ?? false,
         sistema_operativo: equipo.sistema_operativo || '',
         estado_actual: equipo.estado_actual || 'POR_VALIDAR',
@@ -561,6 +565,110 @@ export const EquipoFormModal = ({
                 </FormItem>
               )}
             />
+
+            {/* Instalado en - Solo si es accesorio y tiene equipo principal */}
+{isEditing && Boolean(equipo?.es_accesorio) && equipo?.equipo_principal_id && (
+  <>
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Cpu className="h-5 w-5 text-amber-600" />
+          <div>
+            <p className="text-sm font-medium text-amber-800">Instalado en:</p>
+            <p className="text-sm text-amber-700">
+              {equipo.equipo_principal_modelo} - {equipo.equipo_principal_serie || equipo.equipo_principal_inv_entel || 'S/N'}
+            </p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="text-red-600 border-red-300 hover:bg-red-50"
+          onClick={() => setShowDesinstalarConfirm(true)}
+          disabled={desinstalarMutation.isPending}
+        >
+          {desinstalarMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              <Unlink className="h-4 w-4 mr-1" />
+              Desinstalar
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+
+    {/* Modal de confirmación para desinstalar */}
+    <Dialog open={showDesinstalarConfirm} onOpenChange={setShowDesinstalarConfirm}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-amber-600">
+            <AlertTriangle className="h-5 w-5" />
+            ¿Desinstalar Accesorio?
+          </DialogTitle>
+          <DialogDescription>
+            Estás a punto de desinstalar este accesorio del equipo principal.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-500">Accesorio:</span>
+            <span className="font-medium">{equipo.subcategoria_nombre} - {equipo.modelo_nombre}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-500">Serie:</span>
+            <span className="font-mono">{equipo.numero_serie || 'S/N'}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-500">Equipo principal:</span>
+            <span className="font-medium">{equipo.equipo_principal_modelo} - {equipo.equipo_principal_serie}</span>
+          </div>
+        </div>
+
+        <p className="text-sm text-amber-600">
+          El accesorio quedará disponible para ser instalado en otro equipo.
+        </p>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowDesinstalarConfirm(false)}
+            disabled={desinstalarMutation.isPending}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => {
+              desinstalarMutation.mutate(
+                { accesorioId: equipo.id },
+                {
+                  onSuccess: () => {
+                    setShowDesinstalarConfirm(false);
+                    onOpenChange(false);
+                  },
+                }
+              );
+            }}
+            disabled={desinstalarMutation.isPending}
+          >
+            {desinstalarMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Unlink className="h-4 w-4 mr-2" />
+            )}
+            Desinstalar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>
+)}
 
             {/* Observaciones */}
             <FormField
