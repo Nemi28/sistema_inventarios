@@ -30,7 +30,9 @@ export interface Equipo {
   tienda_pdv?: string;
   orden_numero?: string;
   equipo_principal_serie?: string;
-  
+  equipo_principal_inv_entel?: string;
+  equipo_principal_modelo?: string;
+  accesorios_count?: number;
   // Datos para Vista ALMACÉN
   ultima_ubicacion_origen?: string;
   

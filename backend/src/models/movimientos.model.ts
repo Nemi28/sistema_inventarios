@@ -141,6 +141,38 @@ export const crearMovimientos = async (
       );
     }
 
+    // ✅ Agregar automáticamente los accesorios instalados en equipos que ya los tienen
+    const tiposConAccesorios = [
+      'RETORNO_TIENDA', 
+      'RETORNO_PERSONA', 
+      'SALIDA_ASIGNACION', 
+      'SALIDA_REEMPLAZO', 
+      'SALIDA_PRESTAMO', 
+      'TRANSFERENCIA_TIENDAS'
+    ];
+    
+    if (tiposConAccesorios.includes(datosMovimiento.tipo_movimiento)) {
+      for (const equipo_id of [...equipos_ids]) {
+        // Buscar accesorios instalados en este equipo
+        const [accesoriosRows] = await connection.execute<RowDataPacket[]>(
+          `SELECT id, numero_serie FROM equipos 
+           WHERE equipo_principal_id = ? AND activo = true`,
+          [equipo_id]
+        );
+
+        for (const accesorio of accesoriosRows) {
+          // Agregar a la lista si no está ya
+          if (!equipos_ids.includes(accesorio.id)) {
+            equipos_ids.push(accesorio.id);
+            equiposInfo.set(accesorio.id, {
+              es_accesorio: true,
+              numero_serie: accesorio.numero_serie,
+            });
+          }
+        }
+      }
+    }
+
     // ✅ VALIDACIÓN DE INSTALACIONES DE ACCESORIOS
     if (instalaciones_accesorios && instalaciones_accesorios.length > 0) {
       for (const instalacion of instalaciones_accesorios) {
@@ -260,19 +292,28 @@ export const crearMovimientos = async (
 
       // 3. Si es accesorio con instalación, crear movimiento de instalación y actualizar equipo_principal_id
       if (infoEquipo?.es_accesorio && equipoDestinoId) {
+        // Determinar ubicación para el movimiento de instalación
+        const ubicacionInstalacion = datosMovimiento.ubicacion_destino;
+        const tiendaInstalacion = datosMovimiento.tienda_destino_id || null;
+        const personaInstalacion = datosMovimiento.persona_destino || null;
+
         // Crear movimiento de instalación
         const queryInstalacion = `
           INSERT INTO equipos_movimientos (
-            equipo_id, tipo_movimiento, ubicacion_origen, tienda_origen_id,
-            ubicacion_destino, tienda_destino_id, estado_movimiento,
+            equipo_id, tipo_movimiento, ubicacion_origen, tienda_origen_id, persona_origen,
+            ubicacion_destino, tienda_destino_id, persona_destino, estado_movimiento,
             fecha_salida, usuario_id, observaciones, activo
-          ) VALUES (?, 'INSTALACION_ACCESORIO', 'TIENDA', ?, 'TIENDA', ?, 'COMPLETADO', ?, ?, ?, true)
+          ) VALUES (?, 'INSTALACION_ACCESORIO', ?, ?, ?, ?, ?, ?, 'COMPLETADO', ?, ?, ?, true)
         `;
 
         const [resultInstalacion] = await connection.execute<ResultSetHeader>(queryInstalacion, [
           equipo_id,
-          datosMovimiento.tienda_destino_id,
-          datosMovimiento.tienda_destino_id,
+          ubicacionInstalacion,
+          tiendaInstalacion,
+          personaInstalacion,
+          ubicacionInstalacion,
+          tiendaInstalacion,
+          personaInstalacion,
           datosMovimiento.fecha_salida,
           datosMovimiento.usuario_id,
           `Instalado en equipo ID: ${equipoDestinoId}`,

@@ -1,7 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, History, Eye, SlidersHorizontal } from 'lucide-react';
+import { Pencil, Trash2, History, Eye, SlidersHorizontal, Cpu } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Equipo } from '../types';
 
@@ -25,86 +25,85 @@ export const columnsAlmacen: ColumnDef<Equipo>[] = [
     ),
     size: 40,
   },
-  {
-    id: 'categoria',
-    accessorKey: 'categoria_nombre',
-    header: 'Categoría',
-    size: 100,
-    cell: ({ row }) => (
-      <span className="text-xs font-medium truncate block max-w-[100px]" title={row.original.categoria_nombre}>
-        {row.original.categoria_nombre || '-'}
-      </span>
-    ),
+{
+  id: 'equipo',
+  header: 'Equipo',
+  size: 200,
+  cell: ({ row }) => {
+    const { subcategoria_nombre, marca_nombre, modelo_nombre, categoria_nombre, accesorios_count } = row.original;
+    return (
+      <div className="text-xs">
+        <div className="flex items-center gap-1">
+          <span className="font-semibold truncate max-w-[170px]" title={modelo_nombre}>
+            {modelo_nombre || '-'}
+          </span>
+          {(accesorios_count ?? 0) > 0 && (
+            <span className="bg-amber-100 text-amber-700 text-[9px] px-1.5 py-0.5 rounded-full font-medium">
+              {accesorios_count} acc
+            </span>
+          )}
+        </div>
+        <div className="text-[10px] text-gray-500 truncate max-w-[200px]">
+          {subcategoria_nombre || categoria_nombre} • {marca_nombre}
+        </div>
+      </div>
+    );
   },
+},
   {
-    id: 'subcategoria',
-    accessorKey: 'subcategoria_nombre',
-    header: 'Subcategoría',
-    size: 120,
-    cell: ({ row }) => (
-      <span className="text-xs truncate block max-w-[120px]" title={row.original.subcategoria_nombre}>
-        {row.original.subcategoria_nombre || '-'}
-      </span>
-    ),
-  },
-  {
-    id: 'marca',
-    accessorKey: 'marca_nombre',
-    header: 'Marca',
-    size: 90,
-    cell: ({ row }) => (
-      <span className="text-xs font-medium truncate block max-w-[90px]" title={row.original.marca_nombre}>
-        {row.original.marca_nombre || '-'}
-      </span>
-    ),
-  },
-  {
-    id: 'modelo',
-    accessorKey: 'modelo_nombre',
-    header: 'Modelo',
-    size: 120,
-    cell: ({ row }) => (
-      <span className="text-xs font-semibold truncate block max-w-[120px]" title={row.original.modelo_nombre}>
-        {row.original.modelo_nombre || '-'}
-      </span>
-    ),
-  },
-  {
-    id: 'numero_serie',
-    accessorKey: 'numero_serie',
-    header: 'Serie',
-    size: 110,
-    cell: ({ row }) => (
-      <span className="font-mono text-xs truncate block max-w-[110px]" title={row.original.numero_serie}>
-        {row.original.numero_serie || '-'}
-      </span>
-    ),
-  },
-  {
-    id: 'inv_entel',
-    accessorKey: 'inv_entel',
-    header: 'Inv. Entel',
-    size: 110,
-    cell: ({ row }) => (
-      <span className="font-mono text-xs font-semibold text-primary truncate block max-w-[110px]" title={row.original.inv_entel}>
-        {row.original.inv_entel || '-'}
-      </span>
-    ),
+    id: 'identificacion',
+    header: 'Identificación',
+    size: 130,
+    cell: ({ row }) => {
+      const { numero_serie, inv_entel } = row.original;
+      return (
+        <div className="text-xs font-mono">
+          <div className="truncate max-w-[130px]" title={numero_serie}>
+            {numero_serie || 'S/N'}
+          </div>
+          {inv_entel && inv_entel !== 'NULL' && (
+            <div className="text-[10px] text-primary font-semibold">{inv_entel}</div>
+          )}
+        </div>
+      );
+    },
   },
   {
     id: 'ultima_ubicacion',
     accessorKey: 'ultima_ubicacion_origen',
     header: 'Última Ubicación',
-    size: 150,
+    size: 140,
     cell: ({ row }) => {
-      const ubicacion = row.original.ultima_ubicacion_origen;
+      let ubicacion = row.original.ultima_ubicacion_origen;
       if (!ubicacion) {
         return <span className="text-xs text-gray-400 italic">Nuevo</span>;
       }
+      // Quitar prefijos "Tienda: " y "Persona: "
+      ubicacion = ubicacion.replace(/^(Tienda|Persona):\s*/i, '');
       return (
-        <span className="text-xs text-gray-600 truncate block max-w-[150px]" title={ubicacion}>
+        <span className="text-xs text-gray-600 truncate block max-w-[140px]" title={ubicacion}>
           {ubicacion}
         </span>
+      );
+    },
+  },
+  {
+    id: 'equipo_principal',
+    accessorKey: 'equipo_principal_serie',
+    header: 'Instalado en',
+    size: 150,
+    cell: ({ row }) => {
+      const equipo = row.original;
+      if (!equipo.equipo_principal_id) {
+        return <span className="text-xs text-gray-400">-</span>;
+      }
+      return (
+        <div className="flex items-center gap-1">
+          <Cpu className="h-3 w-3 text-amber-500" />
+          <span className="text-xs truncate block max-w-[130px]" title={`${equipo.equipo_principal_modelo} - ${equipo.equipo_principal_serie}`}>
+            {equipo.equipo_principal_modelo} - {equipo.equipo_principal_serie || equipo.equipo_principal_inv_entel || 'S/N'}
+          </span>
+        </div>
       );
     },
   },
@@ -112,7 +111,7 @@ export const columnsAlmacen: ColumnDef<Equipo>[] = [
     id: 'estado_actual',
     accessorKey: 'estado_actual',
     header: 'Estado',
-    size: 110,
+    size: 90,
     cell: ({ row }) => {
       const estado = row.original.estado_actual;
       const estadoMap: Record<string, { color: string; text: string }> = {
@@ -134,9 +133,9 @@ export const columnsAlmacen: ColumnDef<Equipo>[] = [
     id: 'observaciones',
     accessorKey: 'observaciones',
     header: 'Observaciones',
-    size: 150,
+    size: 130,
     cell: ({ row }) => (
-      <span className="text-xs text-gray-600 truncate block max-w-[150px]" title={row.original.observaciones || ''}>
+      <span className="text-xs text-gray-600 truncate block max-w-[130px]" title={row.original.observaciones || ''}>
         {row.original.observaciones || '-'}
       </span>
     ),
@@ -144,7 +143,7 @@ export const columnsAlmacen: ColumnDef<Equipo>[] = [
   {
     id: 'acciones',
     header: 'Acciones',
-    size: 150,
+    size: 140,
     cell: ({ row, table }) => {
       const item = row.original;
       const meta = table.options.meta as {

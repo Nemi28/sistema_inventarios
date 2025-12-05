@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowRight, ArrowLeft, Check, Loader2, Cpu, AlertTriangle } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, Loader2, Cpu } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -64,7 +64,9 @@ export const MovimientoModal = ({ open, onClose, equipos, ubicacionActual }: Mov
   const equiposNoAccesorios = useMemo(() => equipos.filter((e) => !e.es_accesorio), [equipos]);
   const hayAccesorios = accesorios.length > 0;
   const destinoEsTienda = formData.ubicacion_destino === 'TIENDA';
-  const totalSteps = hayAccesorios && destinoEsTienda ? 5 : 4;
+  const destinoEsPersona = formData.ubicacion_destino === 'PERSONA';
+  const mostrarPasoInstalacion = hayAccesorios && (destinoEsTienda || destinoEsPersona);
+  const totalSteps = mostrarPasoInstalacion ? 5 : 4;
 
   useEffect(() => {
     if (open) {
@@ -80,12 +82,17 @@ export const MovimientoModal = ({ open, onClose, equipos, ubicacionActual }: Mov
   }, [open, equipos, ubicacionActual]);
 
   useEffect(() => {
-    if (hayAccesorios && destinoEsTienda && formData.tienda_destino_id) {
-      setInstalacionesAccesorios(
-        accesorios.map((acc) => ({ accesorio_id: acc.id, equipo_destino_id: 0 }))
-      );
-    }
-  }, [formData.tienda_destino_id, hayAccesorios, destinoEsTienda, accesorios]);
+      if (hayAccesorios && destinoEsTienda && formData.tienda_destino_id) {
+        setInstalacionesAccesorios(
+          accesorios.map((acc) => ({ accesorio_id: acc.id, equipo_destino_id: 0 }))
+        );
+      }
+          if (hayAccesorios && destinoEsPersona && formData.persona_destino) {
+                  setInstalacionesAccesorios(
+          accesorios.map((acc) => ({ accesorio_id: acc.id, equipo_destino_id: 0 }))
+            );
+          }
+          }, [formData.tienda_destino_id, formData.persona_destino, hayAccesorios, destinoEsTienda, destinoEsPersona, accesorios]);
 
   const handleTipoMovimientoChange = (tipo: TipoMovimiento) => {
     let ubicacionDestino: UbicacionMovimiento = 'ALMACEN';
@@ -135,36 +142,11 @@ export const MovimientoModal = ({ open, onClose, equipos, ubicacionActual }: Mov
       return true;
     }
     if (step === 3) return true;
-    if (step === 4 && hayAccesorios && destinoEsTienda) {
-      return instalacionesAccesorios.every((inst) => inst.equipo_destino_id > 0);
-    }
+    if (step === 4 && mostrarPasoInstalacion) {
+        return instalacionesAccesorios.every((inst) => inst.equipo_destino_id > 0);
+      }
     return true;
   };
-
-  const getOpcionesEquipoDestino = () => {
-    const opciones: { id: number; label: string; grupo: string }[] = [];
-    
-    equiposNoAccesorios.forEach((eq) => {
-      opciones.push({
-        id: eq.id,
-        label: `${eq.modelo_nombre} - ${eq.inv_entel || eq.numero_serie || `ID: ${eq.id}`}`,
-        grupo: 'Este envío',
-      });
-    });
-
-    if (equiposEnTienda) {
-      equiposEnTienda.forEach((eq: any) => {
-        opciones.push({
-          id: eq.id,
-          label: `${eq.modelo_nombre} - ${eq.inv_entel || eq.numero_serie || `ID: ${eq.id}`}`,
-          grupo: 'En tienda',
-        });
-      });
-    }
-
-    return opciones;
-  };
-
   const renderStep1 = () => (
     <div className="space-y-4">
       <div>
@@ -261,15 +243,6 @@ export const MovimientoModal = ({ open, onClose, equipos, ubicacionActual }: Mov
           <p className="text-xs text-gray-500 mt-1">Mínimo 3 caracteres</p>
         </div>
       )}
-
-      {hayAccesorios && formData.ubicacion_destino === 'PERSONA' && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-800">
-            Los accesorios se enviarán a la persona sin instalarse en un equipo específico.
-          </p>
-        </div>
-      )}
     </div>
   );
 
@@ -324,7 +297,7 @@ export const MovimientoModal = ({ open, onClose, equipos, ubicacionActual }: Mov
   );
 
   const renderStepAccesorios = () => {
-    const opciones = getOpcionesEquipoDestino();
+   
 
     return (
       <div className="space-y-4">
@@ -349,7 +322,9 @@ export const MovimientoModal = ({ open, onClose, equipos, ubicacionActual }: Mov
                     <Cpu className="h-3 w-3 mr-1" />
                     Accesorio
                   </Badge>
-                  <span className="font-medium">{accesorio.modelo_nombre}</span>
+                  <span className="font-medium">{accesorio.subcategoria_nombre}</span>
+                  <span className="text-gray-500">|</span>
+                  <span className="text-sm text-gray-600 font-mono">Serie: {accesorio.numero_serie || 'S/N'}</span>
                   <span className="text-gray-500">|</span>
                   <span className="text-sm text-gray-600">{accesorio.inv_entel || accesorio.numero_serie}</span>
                 </div>
@@ -376,7 +351,7 @@ export const MovimientoModal = ({ open, onClose, equipos, ubicacionActual }: Mov
                           ))}
                         </>
                       )}
-                      {equiposEnTienda && equiposEnTienda.length > 0 && (
+                      {destinoEsTienda && equiposEnTienda && equiposEnTienda.length > 0 && (
                         <>
                           <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-100 mt-1">
                             🏪 Equipos ya en tienda
@@ -491,7 +466,7 @@ export const MovimientoModal = ({ open, onClose, equipos, ubicacionActual }: Mov
     if (step === 1) return renderStep1();
     if (step === 2) return renderStep2();
     if (step === 3) return renderStep3();
-    if (step === 4 && hayAccesorios && destinoEsTienda) return renderStepAccesorios();
+    if (step === 4 && mostrarPasoInstalacion) return renderStepAccesorios();
     return renderStepConfirmacion();
   };
 
