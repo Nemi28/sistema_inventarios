@@ -41,7 +41,7 @@ export const AlmacenPage = () => {
 
   // Selección múltiple PERSISTENTE por ID
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [selectedEquiposIds, setSelectedEquiposIds] = useState<Set<number>>(new Set());
+  const [selectedEquiposMap, setSelectedEquiposMap] = useState<Map<number, Equipo>>(new Map());
 
   // Modal de historial
   const [equipoParaHistorial, setEquipoParaHistorial] = useState<Equipo | null>(null);
@@ -80,18 +80,18 @@ export const AlmacenPage = () => {
     setPage(1);
   }, [categoriaId, subcategoriaId, marcaId, modeloId, debouncedSearch]);
 
-  // Sincronizar rowSelection con selectedEquiposIds
+  // Sincronizar rowSelection con selectedEquiposMap
   useEffect(() => {
     if (data?.data) {
       const newRowSelection: RowSelectionState = {};
       data.data.forEach((equipo) => {
-        if (selectedEquiposIds.has(equipo.id)) {
+        if (selectedEquiposMap.has(equipo.id)) {
           newRowSelection[equipo.id.toString()] = true;
         }
       });
       setRowSelection(newRowSelection);
     }
-  }, [data, selectedEquiposIds]);
+  }, [data, selectedEquiposMap]);
 
   const handleCreate = () => {
     setEditingEquipo(null);
@@ -175,46 +175,48 @@ export const AlmacenPage = () => {
 
   // Manejar cambios en la selección
   const handleRowSelectionChange = (updaterOrValue: any) => {
-    setRowSelection((old) => {
-      const newSelection = typeof updaterOrValue === 'function' 
-        ? updaterOrValue(old) 
-        : updaterOrValue;
+    const newSelection = typeof updaterOrValue === 'function' 
+      ? updaterOrValue(rowSelection) 
+      : updaterOrValue;
 
-      // Actualizar Set de IDs seleccionados
-      const newIds = new Set(selectedEquiposIds);
+    setRowSelection(newSelection);
+
+    // Actualizar Map de equipos seleccionados
+    setSelectedEquiposMap((prevMap) => {
+      const newMap = new Map(prevMap);
       
-      // Agregar o quitar IDs según la nueva selección
-      Object.keys(newSelection).forEach((id) => {
-        const equipoId = parseInt(id);
-        if (newSelection[id]) {
-          newIds.add(equipoId);
-        } else {
-          newIds.delete(equipoId);
-        }
-      });
-
-      setSelectedEquiposIds(newIds);
-      return newSelection;
+      if (data?.data) {
+        data.data.forEach((equipo) => {
+          const isSelected = newSelection[equipo.id.toString()];
+          if (isSelected) {
+            newMap.set(equipo.id, equipo);
+          } else {
+            newMap.delete(equipo.id);
+          }
+        });
+      }
+      
+      return newMap;
     });
   };
 
   // Obtener equipos seleccionados de TODAS las páginas
   const selectedEquipos = useMemo(() => {
-    return (data?.data || []).filter((equipo) => selectedEquiposIds.has(equipo.id));
-  }, [data, selectedEquiposIds]);
+    return Array.from(selectedEquiposMap.values());
+  }, [selectedEquiposMap]);
 
-  const selectedCount = selectedEquiposIds.size;
+  const selectedCount = selectedEquiposMap.size;
 
   const handleMovimientoClose = () => {
     closeMovimiento();
     setRowSelection({});
-    setSelectedEquiposIds(new Set());
+    setSelectedEquiposMap(new Map());
     refetch();
   };
 
   const handleClearSelection = () => {
     setRowSelection({});
-    setSelectedEquiposIds(new Set());
+    setSelectedEquiposMap(new Map());
   };
 
   return (
