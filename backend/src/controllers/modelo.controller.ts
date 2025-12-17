@@ -26,7 +26,7 @@ export const crear = async (req: Request, res: Response) => {
       });
     }
 
-    const { subcategoria_id, marca_id, nombre, especificaciones_tecnicas, activo } = req.body;
+    const { subcategoria_id, marca_id, sku_id, nombre, especificaciones_tecnicas, activo } = req.body;
 
     // Verificar que la subcategoría existe
     const subcategoriaExiste = await SubcategoriaModel.obtenerSubcategoriaPorId(subcategoria_id);
@@ -59,6 +59,7 @@ export const crear = async (req: Request, res: Response) => {
     const nuevoId = await ModeloModel.crearModelo({
       subcategoria_id,
       marca_id,
+      sku_id,
       nombre,
       especificaciones_tecnicas,
       activo: activo ?? true,
@@ -246,7 +247,7 @@ export const actualizar = async (req: Request, res: Response) => {
     }
 
     const { id } = req.params;
-    const { subcategoria_id, marca_id, nombre, especificaciones_tecnicas, activo } = req.body;
+    const { subcategoria_id, marca_id, sku_id, nombre, especificaciones_tecnicas, activo } = req.body;
 
     // Verificar si el modelo existe
     const modeloExistente = await ModeloModel.obtenerModeloPorId(parseInt(id));
@@ -303,6 +304,7 @@ export const actualizar = async (req: Request, res: Response) => {
     const actualizado = await ModeloModel.actualizarModelo(parseInt(id), {
       subcategoria_id,
       marca_id,
+      sku_id,
       nombre,
       especificaciones_tecnicas,
       activo,
