@@ -1,6 +1,9 @@
 import { User, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
+import { DashboardProvider } from '../context/DashboardContext';
+import { DashboardFilters } from './DashboardFilters';
+import { LaptopsPropiedadCards } from './LaptopsPropiedadCards';
 import { EquiposUbicacionCards } from './EquiposUbicacionCards';
 import { EquiposEstadoCards } from './EquiposEstadoCards';
 import { ActividadMovimientosCards } from './ActividadMovimientosCards';
@@ -9,7 +12,7 @@ import { DashboardCharts } from './DashboardCharts';
 import { DashboardTables } from './DashboardTables';
 import { ResumenCatalogoPanel } from './ResumenCatalogoPanel';
 
-export const DashboardPage = () => {
+const DashboardContent = () => {
   const { user } = useAuth();
   const { isAdmin, isGestor } = usePermissions();
 
@@ -40,7 +43,19 @@ export const DashboardPage = () => {
       {/* Dashboard Completo - Solo para Admin y Gestor */}
       {(isAdmin || isGestor) ? (
         <>
-          {/* Sección 1: KPIs de Equipos por Ubicación */}
+          {/* Filtros */}
+          <DashboardFilters />
+
+          {/* Sección 1: Laptops por Propiedad */}
+          <section>
+            <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <span className="w-1 h-6 bg-amber-500 rounded-full"></span>
+              Laptops: Propias vs Alquiladas
+            </h2>
+            <LaptopsPropiedadCards />
+          </section>
+
+          {/* Sección 2: KPIs de Equipos por Ubicación */}
           <section>
             <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
               <span className="w-1 h-6 bg-blue-600 rounded-full"></span>
@@ -49,7 +64,7 @@ export const DashboardPage = () => {
             <EquiposUbicacionCards />
           </section>
 
-          {/* Sección 2: KPIs de Equipos por Estado */}
+          {/* Sección 3: KPIs de Equipos por Estado */}
           <section>
             <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
               <span className="w-1 h-6 bg-emerald-600 rounded-full"></span>
@@ -58,7 +73,7 @@ export const DashboardPage = () => {
             <EquiposEstadoCards />
           </section>
 
-          {/* Sección 3: Actividad de Movimientos */}
+          {/* Sección 4: Actividad de Movimientos */}
           <section>
             <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
               <span className="w-1 h-6 bg-indigo-600 rounded-full"></span>
@@ -67,22 +82,22 @@ export const DashboardPage = () => {
             <ActividadMovimientosCards />
           </section>
 
-          {/* Sección 4: Alertas Operativas */}
+          {/* Sección 5: Alertas Operativas */}
           <section>
             <AlertasOperativasPanel />
           </section>
 
-          {/* Sección 5: Gráficos */}
+          {/* Sección 6: Gráficos */}
           <section>
             <DashboardCharts />
           </section>
 
-          {/* Sección 6: Tablas Recientes */}
+          {/* Sección 7: Tablas Recientes */}
           <section>
             <DashboardTables />
           </section>
 
-          {/* Sección 7: Resumen de Catálogo (colapsable) */}
+          {/* Sección 8: Resumen de Catálogo (colapsable) */}
           <section>
             <ResumenCatalogoPanel />
           </section>
@@ -103,5 +118,13 @@ export const DashboardPage = () => {
         </div>
       )}
     </div>
+  );
+};
+
+export const DashboardPage = () => {
+  return (
+    <DashboardProvider>
+      <DashboardContent />
+    </DashboardProvider>
   );
 };

@@ -1,9 +1,10 @@
-import React from 'react';
 import { Warehouse, Store, UserCheck, Truck, Package } from 'lucide-react';
 import { useEquiposPorUbicacion } from '../hooks/useDashboard';
+import { useDashboardFiltros } from '../context/DashboardContext';
 
 export const EquiposUbicacionCards = () => {
-  const { data, isLoading } = useEquiposPorUbicacion();
+  const { filtros } = useDashboardFiltros();
+  const { data, isLoading } = useEquiposPorUbicacion(filtros);
 
   if (isLoading) {
     return (

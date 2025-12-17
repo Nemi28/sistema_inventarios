@@ -171,3 +171,40 @@ export interface EquiposPorCategoria {
   cantidad: number;
   porcentaje: number;
 }
+
+// ============================================
+// LAPTOPS POR PROPIEDAD
+// ============================================
+
+export interface LaptopsPorPropiedadDetalle {
+  total: number;
+  en_almacen: number;
+  en_tiendas: number;
+  en_personas: number;
+}
+
+export interface LaptopsPorPropiedad {
+  total: number;
+  propias: LaptopsPorPropiedadDetalle;
+  alquiladas: LaptopsPorPropiedadDetalle;
+}
+
+// ============================================
+// FILTROS DASHBOARD
+// ============================================
+
+export interface DashboardFiltros {
+  socio_id?: number;
+  subcategoria_id?: number;
+}
+
+export interface SocioLista {
+  id: number;
+  nombre: string;
+}
+
+export interface SubcategoriaLista {
+  id: number;
+  nombre: string;
+  categoria: string;
+}
