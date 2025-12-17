@@ -1,14 +1,93 @@
 /**
- * Controlador Dashboard v2
+ * Controlador Dashboard v3
  * Sistema de Gestión de Inventarios
- * Enfocado en métricas operativas de equipos y movimientos
+ * Con filtros por socio y subcategoría
  */
 
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
 import { RowDataPacket } from 'mysql2';
 
+// Helper para construir condiciones de filtro
+const buildFiltrosEquipos = (
+  socioId?: number,
+  subcategoriaId?: number,
+  aliasEquipo: string = 'e'
+): { condiciones: string[]; params: any[] } => {
+  const condiciones: string[] = [];
+  const params: any[] = [];
+
+  if (socioId) {
+    condiciones.push(`${aliasEquipo}.tienda_id IN (SELECT id FROM tienda WHERE socio_id = ?)`);
+    params.push(socioId);
+  }
+
+  if (subcategoriaId) {
+    condiciones.push(`${aliasEquipo}.modelo_id IN (SELECT id FROM modelos WHERE subcategoria_id = ?)`);
+    params.push(subcategoriaId);
+  }
+
+  return { condiciones, params };
+};
+
 export class DashboardController {
+  // =============================================
+  // LISTAS PARA FILTROS
+  // =============================================
+
+  /**
+   * Obtener lista de socios para combo
+   * GET /api/dashboard/socios-lista
+   */
+  static async getSociosLista(req: Request, res: Response): Promise<void> {
+    try {
+      const [rows] = await pool.query<RowDataPacket[]>(`
+        SELECT id, razon_social as nombre
+        FROM socio
+        WHERE activo = true
+        ORDER BY razon_social ASC
+      `);
+
+      res.json({
+        success: true,
+        data: rows,
+      });
+    } catch (error) {
+      console.error('Error al obtener lista de socios:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener lista de socios',
+      });
+    }
+  }
+
+  /**
+   * Obtener lista de subcategorías para combo
+   * GET /api/dashboard/subcategorias-lista
+   */
+  static async getSubcategoriasLista(req: Request, res: Response): Promise<void> {
+    try {
+      const [rows] = await pool.query<RowDataPacket[]>(`
+        SELECT sc.id, sc.nombre, c.nombre as categoria
+        FROM subcategorias sc
+        INNER JOIN categorias c ON sc.categoria_id = c.id
+        WHERE sc.activo = true
+        ORDER BY c.nombre ASC, sc.nombre ASC
+      `);
+
+      res.json({
+        success: true,
+        data: rows,
+      });
+    } catch (error) {
+      console.error('Error al obtener lista de subcategorías:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener lista de subcategorías',
+      });
+    }
+  }
+
   // =============================================
   // KPIS DE EQUIPOS
   // =============================================
@@ -19,23 +98,36 @@ export class DashboardController {
    */
   static async getEquiposPorUbicacion(req: Request, res: Response): Promise<void> {
     try {
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+      const subcategoriaId = req.query.subcategoria_id ? Number(req.query.subcategoria_id) : undefined;
+
+      const { condiciones, params } = buildFiltrosEquipos(socioId, subcategoriaId, 'e');
+      const whereBase = ['e.activo = true', ...condiciones].join(' AND ');
+
       const [result] = await pool.query<RowDataPacket[]>(`
         SELECT 
           COUNT(*) as total,
-          SUM(CASE WHEN ubicacion_actual = 'ALMACEN' THEN 1 ELSE 0 END) as en_almacen,
-          SUM(CASE WHEN ubicacion_actual = 'TIENDA' THEN 1 ELSE 0 END) as en_tiendas,
-          SUM(CASE WHEN ubicacion_actual = 'PERSONA' THEN 1 ELSE 0 END) as en_personas,
-          SUM(CASE WHEN ubicacion_actual = 'EN_TRANSITO' THEN 1 ELSE 0 END) as en_transito
-        FROM equipos
-        WHERE activo = true
-      `);
+          SUM(CASE WHEN e.ubicacion_actual = 'ALMACEN' THEN 1 ELSE 0 END) as en_almacen,
+          SUM(CASE WHEN e.ubicacion_actual = 'TIENDA' THEN 1 ELSE 0 END) as en_tiendas,
+          SUM(CASE WHEN e.ubicacion_actual = 'PERSONA' THEN 1 ELSE 0 END) as en_personas,
+          SUM(CASE WHEN e.ubicacion_actual = 'EN_TRANSITO' THEN 1 ELSE 0 END) as en_transito
+        FROM equipos e
+        WHERE ${whereBase}
+      `, params);
 
-      // Contar movimientos en tránsito (estado EN_TRANSITO en movimientos)
-      const [movEnTransito] = await pool.query<RowDataPacket[]>(`
-        SELECT COUNT(DISTINCT equipo_id) as cantidad
-        FROM equipos_movimientos
-        WHERE estado_movimiento = 'EN_TRANSITO' AND activo = true
-      `);
+      // Contar movimientos en tránsito
+      let transitoQuery = `
+        SELECT COUNT(DISTINCT em.equipo_id) as cantidad
+        FROM equipos_movimientos em
+        INNER JOIN equipos e ON em.equipo_id = e.id
+        WHERE em.estado_movimiento = 'EN_TRANSITO' AND em.activo = true
+      `;
+      
+      if (condiciones.length > 0) {
+        transitoQuery += ` AND ${condiciones.join(' AND ')}`;
+      }
+
+      const [movEnTransito] = await pool.query<RowDataPacket[]>(transitoQuery, params);
 
       res.json({
         success: true,
@@ -62,16 +154,22 @@ export class DashboardController {
    */
   static async getEquiposPorEstado(req: Request, res: Response): Promise<void> {
     try {
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+      const subcategoriaId = req.query.subcategoria_id ? Number(req.query.subcategoria_id) : undefined;
+
+      const { condiciones, params } = buildFiltrosEquipos(socioId, subcategoriaId, 'e');
+      const whereBase = ['e.activo = true', ...condiciones].join(' AND ');
+
       const [result] = await pool.query<RowDataPacket[]>(`
         SELECT 
-          SUM(CASE WHEN estado_actual = 'OPERATIVO' THEN 1 ELSE 0 END) as operativo,
-          SUM(CASE WHEN estado_actual = 'POR_VALIDAR' THEN 1 ELSE 0 END) as por_validar,
-          SUM(CASE WHEN estado_actual = 'EN_GARANTIA' THEN 1 ELSE 0 END) as en_garantia,
-          SUM(CASE WHEN estado_actual = 'INOPERATIVO' THEN 1 ELSE 0 END) as inoperativo,
-          SUM(CASE WHEN estado_actual = 'BAJA' THEN 1 ELSE 0 END) as baja
-        FROM equipos
-        WHERE activo = true
-      `);
+          SUM(CASE WHEN e.estado_actual = 'OPERATIVO' THEN 1 ELSE 0 END) as operativo,
+          SUM(CASE WHEN e.estado_actual = 'POR_VALIDAR' THEN 1 ELSE 0 END) as por_validar,
+          SUM(CASE WHEN e.estado_actual = 'EN_GARANTIA' THEN 1 ELSE 0 END) as en_garantia,
+          SUM(CASE WHEN e.estado_actual = 'INOPERATIVO' THEN 1 ELSE 0 END) as inoperativo,
+          SUM(CASE WHEN e.estado_actual = 'BAJA' THEN 1 ELSE 0 END) as baja
+        FROM equipos e
+        WHERE ${whereBase}
+      `, params);
 
       res.json({
         success: true,
@@ -92,6 +190,92 @@ export class DashboardController {
     }
   }
 
+  /**
+   * Obtener KPIs de Laptops por tipo de propiedad
+   * GET /api/dashboard/laptops-propiedad
+   */
+  static async getLaptopsPorPropiedad(req: Request, res: Response): Promise<void> {
+    try {
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+
+      let condicionSocio = '';
+      const params: any[] = [];
+
+      if (socioId) {
+        condicionSocio = 'AND e.tienda_id IN (SELECT id FROM tienda WHERE socio_id = ?)';
+        params.push(socioId);
+      }
+
+      const [result] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN e.tipo_propiedad = 'PROPIO' THEN 1 ELSE 0 END) as propias,
+          SUM(CASE WHEN e.tipo_propiedad = 'ALQUILADO' THEN 1 ELSE 0 END) as alquiladas
+        FROM equipos e
+        INNER JOIN modelos m ON e.modelo_id = m.id
+        INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+        WHERE e.activo = true
+          AND sc.nombre = 'LAPTOP'
+          ${condicionSocio}
+      `, params);
+
+      // Desglose por ubicación para laptops alquiladas
+      const [alquiladasUbicacion] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          SUM(CASE WHEN e.ubicacion_actual = 'ALMACEN' THEN 1 ELSE 0 END) as en_almacen,
+          SUM(CASE WHEN e.ubicacion_actual = 'TIENDA' THEN 1 ELSE 0 END) as en_tiendas,
+          SUM(CASE WHEN e.ubicacion_actual = 'PERSONA' THEN 1 ELSE 0 END) as en_personas
+        FROM equipos e
+        INNER JOIN modelos m ON e.modelo_id = m.id
+        INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+        WHERE e.activo = true
+          AND sc.nombre = 'LAPTOP'
+          AND e.tipo_propiedad = 'ALQUILADO'
+          ${condicionSocio}
+      `, params);
+
+      // Desglose por ubicación para laptops propias
+      const [propiasUbicacion] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          SUM(CASE WHEN e.ubicacion_actual = 'ALMACEN' THEN 1 ELSE 0 END) as en_almacen,
+          SUM(CASE WHEN e.ubicacion_actual = 'TIENDA' THEN 1 ELSE 0 END) as en_tiendas,
+          SUM(CASE WHEN e.ubicacion_actual = 'PERSONA' THEN 1 ELSE 0 END) as en_personas
+        FROM equipos e
+        INNER JOIN modelos m ON e.modelo_id = m.id
+        INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
+        WHERE e.activo = true
+          AND sc.nombre = 'LAPTOP'
+          AND e.tipo_propiedad = 'PROPIO'
+          ${condicionSocio}
+      `, params);
+
+      res.json({
+        success: true,
+        data: {
+          total: result[0].total || 0,
+          propias: {
+            total: result[0].propias || 0,
+            en_almacen: propiasUbicacion[0]?.en_almacen || 0,
+            en_tiendas: propiasUbicacion[0]?.en_tiendas || 0,
+            en_personas: propiasUbicacion[0]?.en_personas || 0,
+          },
+          alquiladas: {
+            total: result[0].alquiladas || 0,
+            en_almacen: alquiladasUbicacion[0]?.en_almacen || 0,
+            en_tiendas: alquiladasUbicacion[0]?.en_tiendas || 0,
+            en_personas: alquiladasUbicacion[0]?.en_personas || 0,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error al obtener laptops por propiedad:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener laptops por propiedad',
+      });
+    }
+  }
+
   // =============================================
   // ACTIVIDAD DE MOVIMIENTOS
   // =============================================
@@ -102,21 +286,39 @@ export class DashboardController {
    */
   static async getActividadMovimientos(req: Request, res: Response): Promise<void> {
     try {
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+      const subcategoriaId = req.query.subcategoria_id ? Number(req.query.subcategoria_id) : undefined;
+
+      let condiciones = ['em.activo = true'];
+      const params: any[] = [];
+
+      if (socioId) {
+        condiciones.push(`e.tienda_id IN (SELECT id FROM tienda WHERE socio_id = ?)`);
+        params.push(socioId);
+      }
+
+      if (subcategoriaId) {
+        condiciones.push(`e.modelo_id IN (SELECT id FROM modelos WHERE subcategoria_id = ?)`);
+        params.push(subcategoriaId);
+      }
+
+      const whereClause = condiciones.join(' AND ');
+
       const [result] = await pool.query<RowDataPacket[]>(`
         SELECT 
-          SUM(CASE WHEN DATE(fecha_creacion) = CURDATE() THEN 1 ELSE 0 END) as hoy,
-          SUM(CASE WHEN YEAR(fecha_creacion) = YEAR(CURDATE()) 
-                   AND MONTH(fecha_creacion) = MONTH(CURDATE()) THEN 1 ELSE 0 END) as mes_actual,
-          SUM(CASE WHEN YEAR(fecha_creacion) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
-                   AND MONTH(fecha_creacion) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) THEN 1 ELSE 0 END) as mes_anterior
-        FROM equipos_movimientos
-        WHERE activo = true
-      `);
+          SUM(CASE WHEN DATE(em.fecha_creacion) = CURDATE() THEN 1 ELSE 0 END) as hoy,
+          SUM(CASE WHEN YEAR(em.fecha_creacion) = YEAR(CURDATE()) 
+                   AND MONTH(em.fecha_creacion) = MONTH(CURDATE()) THEN 1 ELSE 0 END) as mes_actual,
+          SUM(CASE WHEN YEAR(em.fecha_creacion) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+                   AND MONTH(em.fecha_creacion) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) THEN 1 ELSE 0 END) as mes_anterior
+        FROM equipos_movimientos em
+        INNER JOIN equipos e ON em.equipo_id = e.id
+        WHERE ${whereClause}
+      `, params);
 
       const mesActual = result[0].mes_actual || 0;
       const mesAnterior = result[0].mes_anterior || 0;
       
-      // Calcular porcentaje de crecimiento
       let porcentajeCrecimiento = 0;
       if (mesAnterior > 0) {
         porcentajeCrecimiento = Math.round(((mesActual - mesAnterior) / mesAnterior) * 100);
@@ -152,22 +354,44 @@ export class DashboardController {
    */
   static async getAlertasOperativas(req: Request, res: Response): Promise<void> {
     try {
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+      const subcategoriaId = req.query.subcategoria_id ? Number(req.query.subcategoria_id) : undefined;
+
+      let condicionesBase: string[] = [];
+      const params: any[] = [];
+
+      if (socioId) {
+        condicionesBase.push(`e.tienda_id IN (SELECT id FROM tienda WHERE socio_id = ?)`);
+        params.push(socioId);
+      }
+
+      if (subcategoriaId) {
+        condicionesBase.push(`e.modelo_id IN (SELECT id FROM modelos WHERE subcategoria_id = ?)`);
+        params.push(subcategoriaId);
+      }
+
+      const filtroExtra = condicionesBase.length > 0 ? ` AND ${condicionesBase.join(' AND ')}` : '';
+
       // Movimientos en tránsito por más de 7 días
       const [enTransitoLargo] = await pool.query<RowDataPacket[]>(`
         SELECT COUNT(*) as cantidad
-        FROM equipos_movimientos
-        WHERE estado_movimiento = 'EN_TRANSITO'
-          AND activo = true
-          AND DATEDIFF(CURDATE(), fecha_salida) > 7
-      `);
+        FROM equipos_movimientos em
+        INNER JOIN equipos e ON em.equipo_id = e.id
+        WHERE em.estado_movimiento = 'EN_TRANSITO'
+          AND em.activo = true
+          AND DATEDIFF(CURDATE(), em.fecha_salida) > 7
+          ${filtroExtra}
+      `, params);
 
       // Movimientos pendientes
       const [pendientes] = await pool.query<RowDataPacket[]>(`
         SELECT COUNT(*) as cantidad
-        FROM equipos_movimientos
-        WHERE estado_movimiento = 'PENDIENTE'
-          AND activo = true
-      `);
+        FROM equipos_movimientos em
+        INNER JOIN equipos e ON em.equipo_id = e.id
+        WHERE em.estado_movimiento = 'PENDIENTE'
+          AND em.activo = true
+          ${filtroExtra}
+      `, params);
 
       // Equipos en almacén sin movimiento en más de 30 días
       const [sinMovimiento] = await pool.query<RowDataPacket[]>(`
@@ -175,21 +399,24 @@ export class DashboardController {
         FROM equipos e
         WHERE e.activo = true
           AND e.ubicacion_actual = 'ALMACEN'
+          ${filtroExtra}
           AND NOT EXISTS (
             SELECT 1 FROM equipos_movimientos em
             WHERE em.equipo_id = e.id
               AND em.activo = true
               AND em.fecha_creacion >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
           )
-      `);
+      `, params);
 
-      // Total de equipos en tránsito (cualquier tiempo)
+      // Total de equipos en tránsito
       const [enTransitoTotal] = await pool.query<RowDataPacket[]>(`
         SELECT COUNT(*) as cantidad
-        FROM equipos_movimientos
-        WHERE estado_movimiento = 'EN_TRANSITO'
-          AND activo = true
-      `);
+        FROM equipos_movimientos em
+        INNER JOIN equipos e ON em.equipo_id = e.id
+        WHERE em.estado_movimiento = 'EN_TRANSITO'
+          AND em.activo = true
+          ${filtroExtra}
+      `, params);
 
       res.json({
         success: true,
@@ -220,18 +447,35 @@ export class DashboardController {
   static async getMovimientosPorMes(req: Request, res: Response): Promise<void> {
     try {
       const periodo = Number(req.query.periodo) || 6;
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+      const subcategoriaId = req.query.subcategoria_id ? Number(req.query.subcategoria_id) : undefined;
+
+      let condiciones = ['em.activo = true', 'em.fecha_creacion >= DATE_SUB(NOW(), INTERVAL ? MONTH)'];
+      const params: any[] = [periodo];
+
+      if (socioId) {
+        condiciones.push(`e.tienda_id IN (SELECT id FROM tienda WHERE socio_id = ?)`);
+        params.push(socioId);
+      }
+
+      if (subcategoriaId) {
+        condiciones.push(`e.modelo_id IN (SELECT id FROM modelos WHERE subcategoria_id = ?)`);
+        params.push(subcategoriaId);
+      }
+
+      const whereClause = condiciones.join(' AND ');
 
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT 
-          DATE_FORMAT(fecha_creacion, '%Y-%m') as mes,
-          DATE_FORMAT(fecha_creacion, '%b %Y') as mes_nombre,
+          DATE_FORMAT(em.fecha_creacion, '%Y-%m') as mes,
+          DATE_FORMAT(em.fecha_creacion, '%b %Y') as mes_nombre,
           COUNT(*) as cantidad
-        FROM equipos_movimientos
-        WHERE fecha_creacion >= DATE_SUB(NOW(), INTERVAL ? MONTH)
-          AND activo = true
+        FROM equipos_movimientos em
+        INNER JOIN equipos e ON em.equipo_id = e.id
+        WHERE ${whereClause}
         GROUP BY mes, mes_nombre
         ORDER BY mes ASC
-      `, [periodo]);
+      `, params);
 
       res.json({
         success: true,
@@ -252,15 +496,21 @@ export class DashboardController {
    */
   static async getDistribucionUbicacion(req: Request, res: Response): Promise<void> {
     try {
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+      const subcategoriaId = req.query.subcategoria_id ? Number(req.query.subcategoria_id) : undefined;
+
+      const { condiciones, params } = buildFiltrosEquipos(socioId, subcategoriaId, 'e');
+      const whereBase = ['e.activo = true', ...condiciones].join(' AND ');
+
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT 
-          ubicacion_actual as ubicacion,
+          e.ubicacion_actual as ubicacion,
           COUNT(*) as cantidad
-        FROM equipos
-        WHERE activo = true
-        GROUP BY ubicacion_actual
+        FROM equipos e
+        WHERE ${whereBase}
+        GROUP BY e.ubicacion_actual
         ORDER BY cantidad DESC
-      `);
+      `, params);
 
       const total = rows.reduce((sum, row) => sum + row.cantidad, 0);
 
@@ -289,16 +539,34 @@ export class DashboardController {
    */
   static async getMovimientosPorTipo(req: Request, res: Response): Promise<void> {
     try {
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+      const subcategoriaId = req.query.subcategoria_id ? Number(req.query.subcategoria_id) : undefined;
+
+      let condiciones = ['em.activo = true', 'em.fecha_creacion >= DATE_SUB(NOW(), INTERVAL 6 MONTH)'];
+      const params: any[] = [];
+
+      if (socioId) {
+        condiciones.push(`e.tienda_id IN (SELECT id FROM tienda WHERE socio_id = ?)`);
+        params.push(socioId);
+      }
+
+      if (subcategoriaId) {
+        condiciones.push(`e.modelo_id IN (SELECT id FROM modelos WHERE subcategoria_id = ?)`);
+        params.push(subcategoriaId);
+      }
+
+      const whereClause = condiciones.join(' AND ');
+
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT 
-          tipo_movimiento,
+          em.tipo_movimiento,
           COUNT(*) as cantidad
-        FROM equipos_movimientos
-        WHERE activo = true
-          AND fecha_creacion >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-        GROUP BY tipo_movimiento
+        FROM equipos_movimientos em
+        INNER JOIN equipos e ON em.equipo_id = e.id
+        WHERE ${whereClause}
+        GROUP BY em.tipo_movimiento
         ORDER BY cantidad DESC
-      `);
+      `, params);
 
       const tiposLabels: Record<string, string> = {
         INGRESO_ALMACEN: 'Ingreso Almacén',
@@ -336,6 +604,24 @@ export class DashboardController {
    */
   static async getEquiposPorCategoria(req: Request, res: Response): Promise<void> {
     try {
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+      const subcategoriaId = req.query.subcategoria_id ? Number(req.query.subcategoria_id) : undefined;
+
+      let condiciones = ['e.activo = true'];
+      const params: any[] = [];
+
+      if (socioId) {
+        condiciones.push(`e.tienda_id IN (SELECT id FROM tienda WHERE socio_id = ?)`);
+        params.push(socioId);
+      }
+
+      if (subcategoriaId) {
+        condiciones.push(`sc.id = ?`);
+        params.push(subcategoriaId);
+      }
+
+      const whereClause = condiciones.join(' AND ');
+
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT 
           c.nombre as categoria,
@@ -344,10 +630,10 @@ export class DashboardController {
         INNER JOIN modelos m ON e.modelo_id = m.id
         INNER JOIN subcategorias sc ON m.subcategoria_id = sc.id
         INNER JOIN categorias c ON sc.categoria_id = c.id
-        WHERE e.activo = true
+        WHERE ${whereClause}
         GROUP BY c.id, c.nombre
         ORDER BY cantidad DESC
-      `);
+      `, params);
 
       const total = rows.reduce((sum, row) => sum + row.cantidad, 0);
 
@@ -377,22 +663,42 @@ export class DashboardController {
   static async getTopTiendasEquipos(req: Request, res: Response): Promise<void> {
     try {
       const limit = Number(req.query.limit) || 10;
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+      const subcategoriaId = req.query.subcategoria_id ? Number(req.query.subcategoria_id) : undefined;
+
+      let condiciones = ['t.activo = true'];
+      const params: any[] = [];
+
+      if (socioId) {
+        condiciones.push(`t.socio_id = ?`);
+        params.push(socioId);
+      }
+
+      let equipoCondiciones = [`e.activo = true`, `e.ubicacion_actual = 'TIENDA'`];
+      
+      if (subcategoriaId) {
+        equipoCondiciones.push(`e.modelo_id IN (SELECT id FROM modelos WHERE subcategoria_id = ?)`);
+        params.push(subcategoriaId);
+      }
+
+      const whereClause = condiciones.join(' AND ');
+      const equipoWhere = equipoCondiciones.join(' AND ');
+
+      params.push(limit);
 
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT 
           t.nombre_tienda as tienda,
           t.pdv,
           s.razon_social as socio,
-          COUNT(e.id) as cantidad_equipos
+          (SELECT COUNT(*) FROM equipos e WHERE e.tienda_id = t.id AND ${equipoWhere}) as cantidad_equipos
         FROM tienda t
         INNER JOIN socio s ON t.socio_id = s.id
-        LEFT JOIN equipos e ON e.tienda_id = t.id AND e.activo = true AND e.ubicacion_actual = 'TIENDA'
-        WHERE t.activo = true
-        GROUP BY t.id, t.nombre_tienda, t.pdv, s.razon_social
+        WHERE ${whereClause}
         HAVING cantidad_equipos > 0
         ORDER BY cantidad_equipos DESC
         LIMIT ?
-      `, [limit]);
+      `, params);
 
       res.json({
         success: true,
@@ -418,6 +724,24 @@ export class DashboardController {
   static async getUltimosMovimientos(req: Request, res: Response): Promise<void> {
     try {
       const limit = Number(req.query.limit) || 5;
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+      const subcategoriaId = req.query.subcategoria_id ? Number(req.query.subcategoria_id) : undefined;
+
+      let condiciones = ['em.activo = true'];
+      const params: any[] = [];
+
+      if (socioId) {
+        condiciones.push(`e.tienda_id IN (SELECT id FROM tienda WHERE socio_id = ?)`);
+        params.push(socioId);
+      }
+
+      if (subcategoriaId) {
+        condiciones.push(`e.modelo_id IN (SELECT id FROM modelos WHERE subcategoria_id = ?)`);
+        params.push(subcategoriaId);
+      }
+
+      const whereClause = condiciones.join(' AND ');
+      params.push(limit);
 
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT 
@@ -443,10 +767,10 @@ export class DashboardController {
         LEFT JOIN tienda to_ ON em.tienda_origen_id = to_.id
         LEFT JOIN tienda td ON em.tienda_destino_id = td.id
         INNER JOIN usuarios u ON em.usuario_id = u.id
-        WHERE em.activo = true
+        WHERE ${whereClause}
         ORDER BY em.fecha_creacion DESC
         LIMIT ?
-      `, [limit]);
+      `, params);
 
       const tiposLabels: Record<string, string> = {
         INGRESO_ALMACEN: 'Ingreso',
@@ -478,11 +802,31 @@ export class DashboardController {
   }
 
   /**
-   * Obtener equipos en tránsito
+   * Obtener equipos en tránsito (máximo 10, los más antiguos)
    * GET /api/dashboard/equipos-en-transito
    */
   static async getEquiposEnTransito(req: Request, res: Response): Promise<void> {
     try {
+      const limit = Number(req.query.limit) || 10;
+      const socioId = req.query.socio_id ? Number(req.query.socio_id) : undefined;
+      const subcategoriaId = req.query.subcategoria_id ? Number(req.query.subcategoria_id) : undefined;
+
+      let condiciones = [`em.estado_movimiento = 'EN_TRANSITO'`, 'em.activo = true'];
+      const params: any[] = [];
+
+      if (socioId) {
+        condiciones.push(`e.tienda_id IN (SELECT id FROM tienda WHERE socio_id = ?)`);
+        params.push(socioId);
+      }
+
+      if (subcategoriaId) {
+        condiciones.push(`e.modelo_id IN (SELECT id FROM modelos WHERE subcategoria_id = ?)`);
+        params.push(subcategoriaId);
+      }
+
+      const whereClause = condiciones.join(' AND ');
+      params.push(limit);
+
       const [rows] = await pool.query<RowDataPacket[]>(`
         SELECT 
           em.id as movimiento_id,
@@ -506,10 +850,10 @@ export class DashboardController {
         INNER JOIN marcas ma ON m.marca_id = ma.id
         LEFT JOIN tienda to_ ON em.tienda_origen_id = to_.id
         LEFT JOIN tienda td ON em.tienda_destino_id = td.id
-        WHERE em.estado_movimiento = 'EN_TRANSITO'
-          AND em.activo = true
+        WHERE ${whereClause}
         ORDER BY em.fecha_salida ASC
-      `);
+        LIMIT ?
+      `, params);
 
       res.json({
         success: true,
@@ -525,7 +869,7 @@ export class DashboardController {
   }
 
   // =============================================
-  // RESUMEN DE CATÁLOGO (mantener los existentes)
+  // RESUMEN DE CATÁLOGO
   // =============================================
 
   /**
@@ -574,7 +918,7 @@ export class DashboardController {
   }
 
   /**
-   * Obtener tiendas por socio (mantener existente)
+   * Obtener tiendas por socio
    * GET /api/dashboard/tiendas-por-socio
    */
   static async getTiendasPorSocio(req: Request, res: Response): Promise<void> {
@@ -603,6 +947,4 @@ export class DashboardController {
       });
     }
   }
-
-  
 }

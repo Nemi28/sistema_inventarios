@@ -1,5 +1,6 @@
 import { Clock, Truck, AlertTriangle, CheckCircle, Store } from 'lucide-react';
 import { useUltimosMovimientos, useEquiposEnTransito, useTopTiendasEquipos } from '../hooks/useDashboard';
+import { useDashboardFiltros } from '../context/DashboardContext';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -11,9 +12,10 @@ const estadoBadge: Record<string, { bg: string; text: string; icon: any }> = {
 };
 
 export const DashboardTables = () => {
-  const { data: movimientos, isLoading: movLoading } = useUltimosMovimientos();
-  const { data: enTransito, isLoading: transitoLoading } = useEquiposEnTransito();
-  const { data: topTiendas, isLoading: tiendasLoading } = useTopTiendasEquipos();
+  const { filtros } = useDashboardFiltros();
+  const { data: movimientos, isLoading: movLoading } = useUltimosMovimientos(filtros);
+  const { data: enTransito, isLoading: transitoLoading } = useEquiposEnTransito(filtros);
+  const { data: topTiendas, isLoading: tiendasLoading } = useTopTiendasEquipos(filtros);
 
   const formatDate = (dateString: string) => {
     try {
@@ -98,6 +100,13 @@ export const DashboardTables = () => {
                       </tr>
                     );
                   })}
+                  {(!movimientos || movimientos.length === 0) && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                        No hay movimientos recientes
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             )}
@@ -150,21 +159,30 @@ export const DashboardTables = () => {
         </div>
       </div>
 
-      {/* Equipos En Tránsito */}
-      {(enTransito && enTransito.length > 0) && (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div className="p-5 border-b bg-red-50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Truck className="text-red-600" size={20} />
-                <h4 className="text-lg font-semibold text-gray-800">Equipos En Tránsito</h4>
-              </div>
+      {/* Equipos En Tránsito - Máximo 10, los más antiguos */}
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="p-5 border-b bg-red-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Truck className="text-red-600" size={20} />
+              <h4 className="text-lg font-semibold text-gray-800">Equipos En Tránsito</h4>
+              <span className="text-xs text-gray-500">(máx. 10 más antiguos)</span>
+            </div>
+            {enTransito && enTransito.length > 0 && (
               <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
                 {enTransito.length} equipos
               </span>
-            </div>
+            )}
           </div>
-          <div className="overflow-x-auto">
+        </div>
+        <div className="overflow-x-auto">
+          {transitoLoading ? (
+            <div className="p-6 space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-12 bg-gray-100 rounded animate-pulse"></div>
+              ))}
+            </div>
+          ) : enTransito && enTransito.length > 0 ? (
             <table className="w-full">
               <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                 <tr>
@@ -210,9 +228,14 @@ export const DashboardTables = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          ) : (
+            <div className="p-8 text-center text-gray-500">
+              <Truck className="mx-auto mb-2 text-gray-300" size={40} />
+              <p>No hay equipos en tránsito</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

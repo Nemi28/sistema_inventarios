@@ -1,8 +1,10 @@
 import { AlertTriangle, Clock, PackageX, Truck } from 'lucide-react';
 import { useAlertasOperativas } from '../hooks/useDashboard';
+import { useDashboardFiltros } from '../context/DashboardContext';
 
 export const AlertasOperativasPanel = () => {
-  const { data, isLoading } = useAlertasOperativas();
+  const { filtros } = useDashboardFiltros();
+  const { data, isLoading } = useAlertasOperativas(filtros);
 
   if (isLoading) {
     return (

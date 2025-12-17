@@ -1,8 +1,10 @@
 import { TrendingUp, TrendingDown, Minus, Activity, Calendar, CalendarDays } from 'lucide-react';
 import { useActividadMovimientos } from '../hooks/useDashboard';
+import { useDashboardFiltros } from '../context/DashboardContext';
 
 export const ActividadMovimientosCards = () => {
-  const { data, isLoading } = useActividadMovimientos();
+  const { filtros } = useDashboardFiltros();
+  const { data, isLoading } = useActividadMovimientos(filtros);
 
   if (isLoading) {
     return (

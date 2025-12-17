@@ -18,6 +18,7 @@ import {
   useEquiposPorCategoria,
   useTiendasPorSocio,
 } from '../hooks/useDashboard';
+import { useDashboardFiltros } from '../context/DashboardContext';
 
 const COLORS_UBICACION = {
   ALMACEN: '#10B981',
@@ -40,11 +41,12 @@ const UBICACION_LABELS: Record<string, string> = {
 
 export const DashboardCharts = () => {
   const [periodo, setPeriodo] = useState<number>(6);
+  const { filtros } = useDashboardFiltros();
 
-  const { data: movMesData, isLoading: movMesLoading } = useMovimientosPorMes(periodo);
-  const { data: distribData, isLoading: distribLoading } = useDistribucionUbicacion();
-  const { data: movTipoData, isLoading: movTipoLoading } = useMovimientosPorTipo();
-  const { data: equipoCatData, isLoading: equipoCatLoading } = useEquiposPorCategoria();
+  const { data: movMesData, isLoading: movMesLoading } = useMovimientosPorMes(periodo, filtros);
+  const { data: distribData, isLoading: distribLoading } = useDistribucionUbicacion(filtros);
+  const { data: movTipoData, isLoading: movTipoLoading } = useMovimientosPorTipo(filtros);
+  const { data: equipoCatData, isLoading: equipoCatLoading } = useEquiposPorCategoria(filtros);
   const { data: tiendasSocioData, isLoading: tiendasSocioLoading } = useTiendasPorSocio();
 
   const isLoading = movMesLoading || distribLoading || movTipoLoading || equipoCatLoading || tiendasSocioLoading;

@@ -1,8 +1,10 @@
 import { CheckCircle, HelpCircle, Shield, XCircle, Trash2 } from 'lucide-react';
 import { useEquiposPorEstado } from '../hooks/useDashboard';
+import { useDashboardFiltros } from '../context/DashboardContext';
 
 export const EquiposEstadoCards = () => {
-  const { data, isLoading } = useEquiposPorEstado();
+  const { filtros } = useDashboardFiltros();
+  const { data, isLoading } = useEquiposPorEstado(filtros);
 
   if (isLoading) {
     return (
