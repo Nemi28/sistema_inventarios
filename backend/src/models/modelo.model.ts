@@ -16,6 +16,7 @@ export interface Modelo {
   id?: number;
   subcategoria_id: number;
   marca_id: number;
+  sku_id?: number | null;
   nombre: string;
   especificaciones_tecnicas?: any; // JSON
   activo?: boolean;
@@ -44,8 +45,8 @@ export interface FiltrosModelo extends PaginacionParams {
 export const crearModelo = async (modelo: Modelo): Promise<number> => {
   try {
     const query = `
-      INSERT INTO modelos (subcategoria_id, marca_id, nombre, especificaciones_tecnicas, activo)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO modelos (subcategoria_id, marca_id, sku_id, nombre, especificaciones_tecnicas, activo)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
 
     const especificacionesJSON = modelo.especificaciones_tecnicas 
@@ -55,6 +56,7 @@ export const crearModelo = async (modelo: Modelo): Promise<number> => {
     const [resultado] = await pool.execute<ResultSetHeader>(query, [
       modelo.subcategoria_id,
       modelo.marca_id,
+      modelo.sku_id || null,
       modelo.nombre,
       especificacionesJSON,
       modelo.activo ?? true,
@@ -125,16 +127,19 @@ export const listarModelos = async (filtros: FiltrosModelo = {}) => {
 
   // Obtener registros con información relacionada
   const querySelect = `
-    SELECT 
-      m.*,
-      s.nombre as subcategoria_nombre,
-      ma.nombre as marca_nombre,
-      c.nombre as categoria_nombre,
-      c.id as categoria_id
-    FROM modelos m
-    INNER JOIN subcategorias s ON m.subcategoria_id = s.id
-    INNER JOIN categorias c ON s.categoria_id = c.id
-    INNER JOIN marcas ma ON m.marca_id = ma.id
+  SELECT 
+    m.*,
+    s.nombre as subcategoria_nombre,
+    ma.nombre as marca_nombre,
+    c.nombre as categoria_nombre,
+    c.id as categoria_id,
+    sk.codigo_sku,
+    sk.descripcion_sku
+  FROM modelos m
+  INNER JOIN subcategorias s ON m.subcategoria_id = s.id
+  INNER JOIN categorias c ON s.categoria_id = c.id
+  INNER JOIN marcas ma ON m.marca_id = ma.id
+  LEFT JOIN skus sk ON m.sku_id = sk.id
     ${whereClause}
     ORDER BY ${campo} ${direccion} 
     LIMIT ${limit} OFFSET ${offset}
@@ -231,19 +236,22 @@ export const buscarModelos = async (termino: string, filtros: FiltrosModelo = {}
  */
 export const obtenerModeloPorId = async (id: number): Promise<Modelo | null> => {
   const [modelos] = await pool.execute<RowDataPacket[]>(
-    `SELECT 
-      m.*,
-      s.nombre as subcategoria_nombre,
-      ma.nombre as marca_nombre,
-      c.nombre as categoria_nombre,
-      c.id as categoria_id
-    FROM modelos m
-    INNER JOIN subcategorias s ON m.subcategoria_id = s.id
-    INNER JOIN categorias c ON s.categoria_id = c.id
-    INNER JOIN marcas ma ON m.marca_id = ma.id
-    WHERE m.id = ?`,
-    [id]
-  );
+  `SELECT 
+    m.*,
+    s.nombre as subcategoria_nombre,
+    ma.nombre as marca_nombre,
+    c.nombre as categoria_nombre,
+    c.id as categoria_id,
+    sk.codigo_sku,
+    sk.descripcion_sku
+  FROM modelos m
+  INNER JOIN subcategorias s ON m.subcategoria_id = s.id
+  INNER JOIN categorias c ON s.categoria_id = c.id
+  INNER JOIN marcas ma ON m.marca_id = ma.id
+  LEFT JOIN skus sk ON m.sku_id = sk.id
+  WHERE m.id = ?`,
+  [id]
+);
 
   if (modelos.length === 0) return null;
 
@@ -297,6 +305,11 @@ export const actualizarModelo = async (
     if (datos.marca_id !== undefined) {
       campos.push('marca_id = ?');
       valores.push(datos.marca_id);
+    }
+
+    if (datos.sku_id !== undefined) {
+       campos.push('sku_id = ?');
+       valores.push(datos.sku_id || null);
     }
 
     if (datos.nombre !== undefined) {

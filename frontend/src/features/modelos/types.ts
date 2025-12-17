@@ -2,6 +2,7 @@ export interface Modelo {
   id: number;
   subcategoria_id: number;
   marca_id: number;
+  sku_id?: number | null;
   nombre: string;
   especificaciones_tecnicas?: Record<string, any>;
   activo: boolean;
@@ -11,11 +12,14 @@ export interface Modelo {
   marca_nombre?: string;
   categoria_nombre?: string;
   categoria_id?: number;
+  codigo_sku?: string;
+  descripcion_sku?: string;
 }
 
 export interface ModeloFormData {
   subcategoria_id: number;
   marca_id: number;
+  sku_id?: number | null;
   nombre: string;
   especificaciones_tecnicas?: Record<string, any>;
   activo: boolean;

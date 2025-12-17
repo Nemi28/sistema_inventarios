@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/popover';
 import { GuiaFormData } from '@/lib/validations';
 import { Trash2, ChevronsUpDown, Check } from 'lucide-react';
-import { useSKUsActivos } from '../hooks/useSKUsActivos';
+import { useSkusActivos } from '@/features/skus/hooks/useSkusActivos';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +39,7 @@ export const DetalleSkuRow = ({
   onRemove,
   canRemove,
 }: DetalleSkuRowProps) => {
-  const { data: skus = [], isLoading } = useSKUsActivos();
+  const { data: skus = [], isLoading } = useSkusActivos();
   const [open, setOpen] = useState(false);
 
   // Obtener el SKU seleccionado actual

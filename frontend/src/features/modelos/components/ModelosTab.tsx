@@ -200,6 +200,9 @@ export const ModelosTab: React.FC<ModelosTabProps> = ({ categoriaId }) => {
                 Marca
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                SKU
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Especificaciones
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -236,6 +239,16 @@ export const ModelosTab: React.FC<ModelosTabProps> = ({ categoriaId }) => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm text-gray-600">{modelo.marca_nombre}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    {modelo.codigo_sku ? (
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">{modelo.codigo_sku}</span>
+                        <p className="text-xs text-gray-500 truncate max-w-[200px]">{modelo.descripcion_sku}</p>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">Sin SKU</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     {modelo.especificaciones_tecnicas ? (

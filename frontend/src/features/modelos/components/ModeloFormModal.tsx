@@ -26,17 +26,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
 import { useCrearModelo } from '../hooks/useCrearModelo';
 import { useUpdateModelo } from '../hooks/useUpdateModelo';
 import { useSubcategoriasPorCategoria } from '@/features/subcategorias/hooks/useSubcategoriasPorCategoria';
 import { useMarcasActivas } from '@/features/marcas/hooks/useMarcasActivas';
+import { useSkusActivos } from '@/features/skus/hooks/useSkusActivos';
 import { Modelo } from '../types';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { ChevronsUpDown, Check, X } from 'lucide-react';
 
 const modeloSchema = z.object({
   subcategoria_id: z.number().min(1, 'La subcategoría es requerida'),
   marca_id: z.number().min(1, 'La marca es requerida'),
+  sku_id: z.number().nullable().optional(),
   nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   especificaciones_tecnicas: z.string().optional(),
   activo: z.boolean(),
@@ -59,29 +76,36 @@ export const ModeloFormModal: React.FC<ModeloFormModalProps> = ({
 }) => {
   const isEditing = !!modelo;
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [skuPopoverOpen, setSkuPopoverOpen] = useState(false);
   
   const crearMutation = useCrearModelo();
   const updateMutation = useUpdateModelo();
 
   const { data: subcategorias } = useSubcategoriasPorCategoria(categoriaId);
   const { data: marcas } = useMarcasActivas();
+  const { data: skus = [], isLoading: skusLoading } = useSkusActivos();
 
   const form = useForm<ModeloFormValues>({
     resolver: zodResolver(modeloSchema),
     defaultValues: {
       subcategoria_id: 0,
       marca_id: 0,
+      sku_id: null,
       nombre: '',
       especificaciones_tecnicas: '',
       activo: true,
     },
   });
 
+  const skuIdSeleccionado = form.watch('sku_id');
+  const skuSeleccionado = skus.find((s) => s.id === skuIdSeleccionado);
+
   useEffect(() => {
     if (modelo) {
       form.reset({
         subcategoria_id: modelo.subcategoria_id,
         marca_id: modelo.marca_id,
+        sku_id: modelo.sku_id || null,
         nombre: modelo.nombre,
         especificaciones_tecnicas: modelo.especificaciones_tecnicas
           ? JSON.stringify(modelo.especificaciones_tecnicas, null, 2)
@@ -96,6 +120,7 @@ export const ModeloFormModal: React.FC<ModeloFormModalProps> = ({
       form.reset({
         subcategoria_id: 0,
         marca_id: 0,
+        sku_id: null,
         nombre: '',
         especificaciones_tecnicas: '',
         activo: true,
@@ -121,16 +146,15 @@ export const ModeloFormModal: React.FC<ModeloFormModalProps> = ({
   };
 
   const onSubmit = (data: ModeloFormValues) => {
-    // Validar JSON antes de enviar
     if (data.especificaciones_tecnicas && !validateJSON(data.especificaciones_tecnicas)) {
       toast.error('Las especificaciones técnicas contienen un JSON inválido');
       return;
     }
 
-    // Preparar datos
     const payload = {
       subcategoria_id: data.subcategoria_id,
       marca_id: data.marca_id,
+      sku_id: data.sku_id || null,
       nombre: data.nombre,
       especificaciones_tecnicas:
         data.especificaciones_tecnicas && data.especificaciones_tecnicas.trim() !== ''
@@ -230,6 +254,91 @@ export const ModeloFormModal: React.FC<ModeloFormModalProps> = ({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* SKU con Combobox */}
+            <FormField
+              control={form.control}
+              name="sku_id"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>SKU (Opcional)</FormLabel>
+                  <div className="flex gap-2">
+                    <Popover open={skuPopoverOpen} onOpenChange={setSkuPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={skuPopoverOpen}
+                            className={cn(
+                              'w-full justify-between font-normal bg-white hover:bg-gray-50',
+                              !field.value && 'text-muted-foreground'
+                            )}
+                          >
+                            <span className="truncate">
+                              {field.value && skuSeleccionado
+                                ? `${skuSeleccionado.codigo_sku} - ${skuSeleccionado.descripcion_sku}`
+                                : 'Buscar SKU...'}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0 bg-white" align="start">
+                        <Command className="bg-white">
+                          <CommandInput placeholder="Buscar por código o descripción..." className="h-9" />
+                          <CommandList>
+                            <CommandEmpty>
+                              {skusLoading ? 'Cargando SKUs...' : 'No se encontraron SKUs'}
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {skus.map((sku) => (
+                                <CommandItem
+                                  key={sku.id}
+                                  value={`${sku.codigo_sku} ${sku.descripcion_sku}`}
+                                  onSelect={() => {
+                                    field.onChange(sku.id);
+                                    setSkuPopoverOpen(false);
+                                  }}
+                                  className="flex items-center gap-2 cursor-pointer"
+                                >
+                                  <Check
+                                    className={cn(
+                                      'h-4 w-4',
+                                      field.value === sku.id ? 'opacity-100' : 'opacity-0'
+                                    )}
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium truncate text-gray-900">
+                                      {sku.descripcion_sku}
+                                    </div>
+                                    <div className="text-xs text-gray-600">
+                                      Código: {sku.codigo_sku}
+                                    </div>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {field.value && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => field.onChange(null)}
+                        className="shrink-0 text-gray-500 hover:text-red-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
